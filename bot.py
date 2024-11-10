@@ -3,123 +3,93 @@ from discord.ext import commands, tasks
 from collections import defaultdict
 import time
 import re
-import json
+import sqlite3
 import asyncio
 
 # Define your bot token and logging channel ID
 TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.GbKOt1.KKnsqSNb-Z6e06AiGv6zkGFpW1alryMd-jCLBU'  # Replace with your bot token
-ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with the ID of the channel for role-related logs
-GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Channel for all other logs
+ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
+GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
 
 # Define intents
 intents = discord.Intents.default()
-intents.members = True  # Enable the members intent to listen to member updates
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-# Regular expression to detect URLs
-URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
 
 # Constants for XP boost and activity burst
 BOOST_DURATION = 300  # 5 minutes in seconds
 BOOST_COOLDOWN = 300  # 5 minutes in seconds
-MESSAGE_LIMIT = 10    # Messages within 5 minutes
-TIME_WINDOW = 300     # 5 minutes in seconds
+MESSAGE_LIMIT = 10
+TIME_WINDOW = 300
 
-# Store user XP and activity data
-user_xp = defaultdict(int)
-user_activity = defaultdict(list)
-boost_active = defaultdict(bool)
-boost_end_time = defaultdict(float)
-boost_cooldown = defaultdict(float)
-
-# Regular expression to detect emojis (anything between `:` symbols)
+# Regular expressions
+URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
 EMOJI_REGEX = r":([^:]+):"
+
+# Database setup
+conn = sqlite3.connect('/app/database.db')  # Ensure database is stored in Glitch's `/app` directory
+cursor = conn.cursor()
+
+# Create tables if not exist
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user_xp (
+    user_id INTEGER PRIMARY KEY,
+    xp INTEGER DEFAULT 0
+)
+""")
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user_activity (
+    user_id INTEGER PRIMARY KEY,
+    last_activity REAL
+)
+""")
+conn.commit()
+
+# Function to update user XP in the database
+def update_user_xp(user_id, xp_gain):
+    cursor.execute("INSERT OR IGNORE INTO user_xp (user_id, xp) VALUES (?, ?)", (user_id, 0))
+    cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (xp_gain, user_id))
+    conn.commit()
+
+# Function to track user activity for burst
+def track_activity(user_id):
+    current_time = time.time()
+    cursor.execute("INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
+    conn.commit()
 
 # Check for activity burst every 2 seconds
 @tasks.loop(seconds=2)
 async def check_activity_burst():
     current_time = time.time()
-    
-    for user_id, activities in user_activity.items():
-        # Check if the user has exceeded the message limit
-        messages_in_time_window = [activity for activity in activities if current_time - activity < TIME_WINDOW]
-        
-        # Update the activity list to only include recent messages
-        user_activity[user_id] = messages_in_time_window
-        
-        # Check if the user triggered a burst
-        if len(messages_in_time_window) >= MESSAGE_LIMIT:
-            if not boost_active[user_id] and current_time - boost_cooldown[user_id] >= BOOST_COOLDOWN:
-                # Activate boost for the user
-                boost_active[user_id] = True
-                boost_end_time[user_id] = current_time + BOOST_DURATION
-                # Apply the boost (For simplicity, let's just print it for now)
-                print(f"XP boost activated for user {user_id}")
-                
-                # Log the boost activation
-                log(f"XP boost activated for user {user_id}")
-        
-        # Handle boost expiration
-        if boost_active[user_id] and current_time >= boost_end_time[user_id]:
-            boost_active[user_id] = False
-            # Reset the cooldown time after the boost
-            boost_cooldown[user_id] = current_time
-            print(f"XP boost expired for user {user_id}")
-            log(f"XP boost expired for user {user_id}")
+    cursor.execute("SELECT user_id, last_activity FROM user_activity")
+    for user_id, last_activity in cursor.fetchall():
+        if current_time - last_activity < TIME_WINDOW:
+            # Apply XP boost logic if applicable
+            pass  # Expand this logic as needed
 
 @bot.event
 async def on_ready():
-    # Console log
     print(f"Bot has successfully logged in as {bot.user}")
-
-    # Send a log message to the general log channel
-    channel = bot.get_channel(GENERAL_LOG_CHANNEL_ID)
-    if channel:
-        await channel.send(f"✅ Bot has successfully logged in as {bot.user.mention}")
-
-    # Start activity burst checking loop
     check_activity_burst.start()
 
-
-# Function to log messages to the general log channel
-def log(message):
-    """Send log messages to the general log channel."""
-    channel = bot.get_channel(GENERAL_LOG_CHANNEL_ID)
-    asyncio.create_task(channel.send(message))
-
-# Function to track message activity for bursts
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:  # Ignore the bot's own messages
+    if message.author == bot.user:
         return
 
     user_id = message.author.id
-    current_time = time.time()
+    filtered_content = re.sub(URL_REGEX, "", message.content)
+    filtered_content = ''.join(c for c in filtered_content if c.isalnum() or c.isspace())
 
-    # Filter out URLs and non-alphanumeric characters (except spaces)
-    filtered_content = re.sub(URL_REGEX, "", message.content)  # Remove URLs
-    filtered_content = ''.join(c for c in filtered_content if c.isalnum() or c.isspace())  # Remove non-alphanumeric characters (except spaces)
-
-    # Calculate character XP (1 XP for each alphanumeric character in the filtered content)
-    character_xp = len(filtered_content.replace(" ", ""))  # Ignore spaces in XP calculation
-
-    # Calculate emoji XP (5 XP for each emoji found between colons `:`)
+    character_xp = len(filtered_content.replace(" ", ""))
     emoji_xp = len(re.findall(EMOJI_REGEX, message.content)) * 5
-
-    # Calculate total XP for this message
     total_xp = character_xp + emoji_xp
 
-    # Add XP to the user's total
-    user_xp[user_id] += total_xp
-
-    # Track activity for burst calculation
-    user_activity[user_id].append(current_time)
-
-    # Handle message (you can also add more logic here, e.g., response to commands)
+    update_user_xp(user_id, total_xp)
+    track_activity(user_id)
     await bot.process_commands(message)
 
-# Define the roles and their corresponding messages
 ROLE_NAMES = {
     "🧔Homo Sapien": {
         "message": "🎉 Congrats {member.mention}! You've become a 🧔Homo Sapien and unlocked GIF permissions!",
@@ -151,32 +121,18 @@ ROLE_NAMES = {
     },
 }
 
+
+
 @bot.event
 async def on_member_update(before, after):
-    """Monitor role changes and announce promotions."""
     if before.roles != after.roles:
         for role in after.roles:
             if role.name in ROLE_NAMES and role.name not in [r.name for r in before.roles]:
                 await announce_role_update(after, role.name)
 
 async def announce_role_update(member, role_name):
-    """Announce role assignment and permission changes."""
     role_info = ROLE_NAMES[role_name]
-    message = role_info["message"]
     log_channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
-    await log_channel.send(message.format(member=member))
-    log(f"Role {role_name} assigned to {member} at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())}")
-    save_data()
+    await log_channel.send(role_info["message"].format(member=member))
 
-def log(message):
-    """Send log messages to the general log channel."""
-    channel = bot.get_channel(GENERAL_LOG_CHANNEL_ID)
-    asyncio.create_task(channel.send(message))
-
-def save_data():
-    """Save XP and activity data to a file (optional)."""
-    with open("xp_data.json", "w") as f:
-        json.dump(user_xp, f)
-
-# Run the bot
 bot.run(TOKEN)
