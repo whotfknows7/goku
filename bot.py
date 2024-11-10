@@ -5,9 +5,6 @@ import time
 import re
 import json
 import asyncio
-import async
-import os
-import shutil
 
 # Define your bot token and logging channel ID
 TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.GbKOt1.KKnsqSNb-Z6e06AiGv6zkGFpW1alryMd-jCLBU'  # Replace with your bot token
@@ -71,10 +68,19 @@ async def check_activity_burst():
             print(f"XP boost expired for user {user_id}")
             log(f"XP boost expired for user {user_id}")
 
-# Start the activity burst checking loop
 @bot.event
 async def on_ready():
+    # Console log
+    print(f"Bot has successfully logged in as {bot.user}")
+
+    # Send a log message to the general log channel
+    channel = bot.get_channel(GENERAL_LOG_CHANNEL_ID)
+    if channel:
+        await channel.send(f"✅ Bot has successfully logged in as {bot.user.mention}")
+
+    # Start activity burst checking loop
     check_activity_burst.start()
+
 
 # Function to log messages to the general log channel
 def log(message):
