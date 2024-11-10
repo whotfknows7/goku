@@ -121,19 +121,7 @@ ROLE_NAMES = {
     },
 }
 
-
-import os
-
-db_path = "/app/database.db"
-
-@bot.event
-async def on_ready():
-    if os.path.exists(db_path):
-        print(f"Database file exists at: {db_path}")
-    else:
-        print(f"Database file not found at: {db_path}")
-
-@bot.event
+ @bot.event
 async def on_member_update(before, after):
     if before.roles != after.roles:
         for role in after.roles:
