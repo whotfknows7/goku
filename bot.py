@@ -7,7 +7,7 @@ import sqlite3
 import asyncio
 
 # Define your bot token and logging channel ID
-TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.GbKOt1.KKnsqSNb-Z6e06AiGv6zkGFpW1alryMd-jCLBU'  # Replace with your bot token
+TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.G589lQ.pEYRw2zAtItUFeT24bhSoNZ7GD2DAJIkNpkFRI'  # Replace with your bot token
 ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
 GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
 
