@@ -65,16 +65,23 @@ def track_activity(user_id):
             log_file.write(f"Error tracking activity for user {user_id}: {e}\n")
 
 # Function to handle XP boost cooldown
-def check_boost_cooldown(user_id):
-    current_time = time.time()
-    cursor.execute("SELECT last_boost_time FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
-    result = cursor.fetchone()
+boost_cooldown_cache = {}
 
-    if result:
-        last_boost_time = result[0]
-        if current_time - last_boost_time < 300:  # 5-minute cooldown
+def check_boost_cooldown(user_id):
+    if user_id in boost_cooldown_cache:
+        last_boost_time = boost_cooldown_cache[user_id]
+        if time.time() - last_boost_time < 300:  # 5-minute cooldown
             return False
+    else:
+        cursor.execute("SELECT last_boost_time FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
+        result = cursor.fetchone()
+        if result:
+            last_boost_time = result[0]
+            boost_cooldown_cache[user_id] = last_boost_time
+            if time.time() - last_boost_time < 300:
+                return False
     return True
+
 
 # Function to update the XP boost cooldown
 def update_boost_cooldown(user_id):
