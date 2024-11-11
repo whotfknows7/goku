@@ -7,7 +7,7 @@ import os
 # Import functions from db_server.py
 from db_server import update_user_xp, track_activity, check_boost_cooldown, update_boost_cooldown, check_activity_burst
 
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+TOKEN = MTMwMzQyNjkzMzU4MDc2MzIzNg.GBNjfR.0TLNjKIh17zO07WFZsIhGu6xbY_kemLvxvFZvI'
 ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
 GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
 
