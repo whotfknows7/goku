@@ -46,6 +46,9 @@ def update_user_xp(user_id, total_xp):
     except sqlite3.Error as e:
         conn.rollback()
         print(f"Error updating XP for user {user_id}: {e}")
+        # Optionally, log the error to a file
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error updating XP for user {user_id}: {e}\n")
 
 # Function to track user activity for burst detection
 def track_activity(user_id):
@@ -57,6 +60,9 @@ def track_activity(user_id):
     except sqlite3.Error as e:
         conn.rollback()
         print(f"Error tracking activity for user {user_id}: {e}")
+        # Optionally, log the error to a file
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error tracking activity for user {user_id}: {e}\n")
 
 # Function to handle XP boost cooldown
 def check_boost_cooldown(user_id):
@@ -94,3 +100,53 @@ def check_activity_burst(user_id, message=None):
         if current_time - last_activity < 300:  # Activity burst within 5 minutes
             return True
     return False
+def cleanup_invalid_users():
+    try:
+        cursor.execute("BEGIN TRANSACTION;")
+
+        # Remove users with negative XP
+        cursor.execute("DELETE FROM user_xp WHERE xp < 0")
+
+        # Remove users with invalid activity timestamps (older than 30 days)
+        cutoff_time = time.time() - (30 * 24 * 60 * 60)  # 30 days ago
+        cursor.execute("DELETE FROM user_activity WHERE last_activity < ?", (cutoff_time,))
+
+        conn.commit()
+
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error during cleanup: {e}")
+        # Optionally, log the error to a file
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error during cleanup: {e}\n")
+def check_database_integrity():
+    try:
+        cursor.execute("PRAGMA integrity_check;")
+        result = cursor.fetchone()
+        if result[0] == "ok":
+            print("Database integrity check passed.")
+        else:
+            print(f"Database integrity check failed: {result}")
+            # Log the issue if needed
+            with open("error_log.txt", "a") as log_file:
+                log_file.write(f"Database integrity check failed: {result}\n")
+    except sqlite3.Error as e:
+        print(f"Error performing integrity check: {e}")
+        # Optionally, log the error to a file
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error performing integrity check: {e}\n")
+def update_bulk_xp(user_xp_data):
+    try:
+        cursor.execute("BEGIN TRANSACTION;")
+        # Prepare the data for batch insertion
+        cursor.executemany("INSERT OR REPLACE INTO user_xp (user_id, xp) VALUES (?, ?)", user_xp_data)
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error bulk updating XP: {e}")
+        # Optionally, log the error to a file
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error bulk updating XP: {e}\n")
+def get_top_xp_users(limit=10, offset=0):
+    cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT ? OFFSET ?", (limit, offset))
+    return cursor.fetchall()
