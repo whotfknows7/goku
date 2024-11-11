@@ -95,9 +95,4 @@ async def announce_role_update(member, role_name):
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
         await channel.send(message)
 
-@tasks.loop(minutes=1)
-async def update_leaderboard():
-    # Logic for leaderboard updates
-    pass
-
 bot.run(TOKEN)

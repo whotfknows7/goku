@@ -39,9 +39,6 @@ def update_user_xp(user_id, total_xp):
     try:
         conn.execute('BEGIN TRANSACTION')  # Start a transaction
 
-        # Analyzing the SELECT query to check the user XP
-        analyze_query(cursor, "SELECT * FROM user_xp WHERE user_id = ?", (user_id,))
-
         # Update the XP (no redundant query execution)
         cursor.execute("INSERT OR IGNORE INTO user_xp (user_id, xp) VALUES (?, ?)", (user_id, 0))
         cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (total_xp, user_id))
@@ -62,9 +59,7 @@ def track_activity(user_id):
     try:
         current_time = time.time()
 
-        # Analyzing the INSERT/REPLACE query for user activity
-        analyze_query(cursor, "INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
-
+        # Update or Insert the activity (replace if already exists)
         cursor.execute("INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
         conn.commit()
 
@@ -82,9 +77,7 @@ def check_boost_cooldown(user_id):
     try:
         current_time = time.time()
 
-        # Analyzing the SELECT query for XP boost cooldown
-        analyze_query(cursor, "SELECT last_boost_time FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
-
+        # Get the last boost time and check cooldown
         cursor.execute("SELECT last_boost_time FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
         result = cursor.fetchone()
 
@@ -109,9 +102,7 @@ def update_boost_cooldown(user_id):
     try:
         current_time = time.time()
 
-        # Analyzing the INSERT/REPLACE query for XP boost cooldown
-        analyze_query(cursor, "INSERT OR REPLACE INTO xp_boost_cooldowns (user_id, last_boost_time) VALUES (?, ?)", (user_id, current_time))
-
+        # Update or Insert the boost cooldown record (replace if exists)
         cursor.execute("INSERT OR REPLACE INTO xp_boost_cooldowns (user_id, last_boost_time) VALUES (?, ?)", (user_id, current_time))
         conn.commit()
 
@@ -129,9 +120,7 @@ def check_activity_burst(user_id):
     try:
         current_time = time.time()
 
-        # Analyzing the SELECT query for last activity
-        analyze_query(cursor, "SELECT last_activity FROM user_activity WHERE user_id = ?", (user_id,))
-
+        # Check the last activity and determine if it's within the burst time
         cursor.execute("SELECT last_activity FROM user_activity WHERE user_id = ?", (user_id,))
         result = cursor.fetchone()
 
@@ -153,8 +142,3 @@ update_user_xp("user123", 10)
 track_activity("user123")
 check_boost_cooldown("user123")
 update_boost_cooldown("user123")
-import sqlite3
-import time
-import queue
-import threading
-
