@@ -1,50 +1,36 @@
-from flask import Flask, request, jsonify
 import sqlite3
+import time
 
-app = Flask(__name__)
+# Database setup
+db_path = '/app/database.db'
+conn = sqlite3.connect(db_path, check_same_thread=False)
+cursor = conn.cursor()
 
-# Initialize database and setup user_data table
-def setup_database():
-    connection = sqlite3.connect("database.db")
-    cursor = connection.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS user_data (
-            user_id INTEGER PRIMARY KEY,
-            xp INTEGER DEFAULT 0,
-            last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    connection.commit()
-    connection.close()
+# Create tables if not exist
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user_xp (
+    user_id INTEGER PRIMARY KEY,
+    xp REAL DEFAULT 0
+)
+""")
 
-setup_database()
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user_activity (
+    user_id INTEGER PRIMARY KEY,
+    last_activity REAL
+)
+""")
 
-# Route to get XP leaderboard
-@app.route("/leaderboard", methods=["GET"])
-def leaderboard():
-    connection = sqlite3.connect("database.db")
-    cursor = connection.cursor()
-    cursor.execute("SELECT user_id, xp FROM user_data ORDER BY xp DESC LIMIT 10")
-    rows = cursor.fetchall()
-    connection.close()
-    return jsonify(rows)
+def update_user_xp(user_id, xp_gain):
+    cursor.execute("INSERT OR IGNORE INTO user_xp (user_id, xp) VALUES (?, ?)", (user_id, 0))
+    cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (xp_gain, user_id))
+    conn.commit()
 
-# Route to update user XP
-@app.route("/update_xp", methods=["POST"])
-def update_xp():
-    data = request.json
-    user_id = data["user_id"]
-    xp = data["xp"]
+def track_activity(user_id):
+    current_time = time.time()
+    cursor.execute("INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
+    conn.commit()
 
-    connection = sqlite3.connect("database.db")
-    cursor = connection.cursor()
-    cursor.execute("""
-        INSERT INTO user_data (user_id, xp)
-        VALUES (?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET xp = xp + ?""", (user_id, xp, xp))
-    connection.commit()
-    connection.close()
-    return {"status": "XP updated successfully"}
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3000)
+# Ensure connection stays alive
+def close_connection():
+    conn.close()
