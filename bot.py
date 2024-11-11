@@ -1,13 +1,12 @@
 import discord
 from discord.ext import commands, tasks
 import re
-import sqlite3
 import time
 import os
 # Import functions from db_server.py
 from db_server import update_user_xp, track_activity, check_boost_cooldown, update_boost_cooldown, check_activity_burst
 
-TOKEN = MTMwMzQyNjkzMzU4MDc2MzIzNg.GBNjfR.0TLNjKIh17zO07WFZsIhGu6xbY_kemLvxvFZvI'
+TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.GBNjfR.0TLNjKIh17zO07WFZsIhGu6xbY_kemLvxvFZvI'
 ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
 GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
 
@@ -28,35 +27,6 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 EMOJI_REGEX = r":([^:]+):"
 
 # Function to update user XP in the database
-def update_user_xp(user_id, xp_gain):
-    cursor.execute("INSERT OR IGNORE INTO user_xp (user_id, xp) VALUES (?, ?)", (user_id, 0))
-    cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (xp_gain, user_id))
-    conn.commit()
-
-# Function to track user activity for burst detection
-def track_activity(user_id):
-    current_time = time.time()
-    cursor.execute("INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
-    conn.commit()
-
-# Function to check for activity burst and apply XP boost
-async def check_activity_burst(user_id, message):
-    if check_activity_burst(user_id):
-        if check_boost_cooldown(user_id):
-            xp_gain = 10  # For example, apply 10 XP boost
-            update_user_xp(user_id, xp_gain)
-            update_boost_cooldown(user_id)
-            await message.channel.send(f"{message.author.mention} has triggered an XP boost!")
-        else:
-            await message.channel.send(f"{message.author.mention}, you're on cooldown for XP boost!")
-    else:
-        # Track activity even without burst
-        track_activity(user_id)
-
-@bot.event
-async def on_ready():
-    print(f"Bot has successfully logged in as {bot.user}")
-
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -70,6 +40,7 @@ async def on_message(message):
     emoji_xp = len(re.findall(EMOJI_REGEX, message.content)) * 0.5
     total_xp = character_xp + emoji_xp
 
+    # Call the functions from db_server.py for database operations
     update_user_xp(user_id, total_xp)
     track_activity(user_id)
 
@@ -109,6 +80,7 @@ ROLE_NAMES = {
     },
 }
 
+
 @bot.event
 async def on_member_update(before, after):
     if before.roles != after.roles:
@@ -117,8 +89,15 @@ async def on_member_update(before, after):
                 await announce_role_update(after, role.name)
 
 async def announce_role_update(member, role_name):
-    role_info = ROLE_NAMES[role_name]
-    log_channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
-    await log_channel.send(role_info["message"].format(member=member))
+    role_info = ROLE_NAMES.get(role_name)
+    if role_info:
+        message = role_info["message"].format(member=member)
+        channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
+        await channel.send(message)
+
+@tasks.loop(minutes=1)
+async def update_leaderboard():
+    # Logic for leaderboard updates
+    pass
 
 bot.run(TOKEN)
