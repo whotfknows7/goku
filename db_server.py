@@ -1,9 +1,11 @@
 import sqlite3
 import time
-
+def update_user_xp(user_id, total_xp):
 # Connect to the SQLite database
-conn = sqlite3.connect('xp_system.db')  # Replace with your database path
-cursor = conn.cursor()
+conn = sqlite3.connect('databse.db')  # Replace with your database path
+  
+  # Create a cursor object to execute SQL commands
+    cursor = conn.cursor()
 
 # Create user_xp table if it doesn't exist
 cursor.execute('''
