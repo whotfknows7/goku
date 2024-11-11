@@ -92,31 +92,31 @@ async def on_message(message):
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {
-        "message": "🎉 Congrats {member.mention}! You've become a Homo Sapien 🧔 and unlocked GIF permissions!",
+        "message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!",
         "has_perms": True
     },
     "🏆Homie": {
-        "message": "🎉 Congrats {member.mention}! You've become a Homie 🏆 and unlocked Image permissions!",
+        "message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!",
         "has_perms": True
     },
     "🥉VETERAN": {
-        "message": "🎉 Congrats {member.mention}! You've become a VETERAN 🥉 member!",
+        "message": "🎉 Congrats {member.mention}! You've become a **VETERAN** 🥉 member!",
         "has_perms": False
     },
     "🥈ELITE": {
-        "message": "🎉 Congrats {member.mention}! You've become an ELITE 🥈 member!",
+        "message": "🎉 Congrats {member.mention}! You've become an **ELITE** 🥈 member!",
         "has_perms": False
     },
     "🥇MYTHIC": {
-        "message": "🎉 Congrats {member.mention}! You've become a MYTHIC 🥇 member!",
+        "message": "🎉 Congrats {member.mention}! You've become a **MYTHIC** 🥇 member!",
         "has_perms": False
     },
     "⭐VIP": {
-        "message": "🎉 Congrats {member.mention}! You've become a VIP ⭐ member!",
+        "message": "🎉 Congrats {member.mention}! You've become a **VIP** ⭐ member!",
         "has_perms": False
     },
     "✨LEGENDARY": {
-        "message": "🎉 Congrats {member.mention}! You've become a LEGENDARY ✨ member!",
+        "message": "🎉 Congrats {member.mention}! You've become a **LEGENDARY** ✨ member!",
         "has_perms": False
     },
 }
