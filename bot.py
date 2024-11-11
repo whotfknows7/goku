@@ -40,13 +40,12 @@ async def on_message(message):
     emoji_xp = len(re.findall(EMOJI_REGEX, message.content)) * 0.5
     total_xp = character_xp + emoji_xp
 
-    # Call the functions from db_server.py for database operations
     update_user_xp(user_id, total_xp)
     track_activity(user_id)
 
     # Check for activity burst and apply XP boost if applicable
-    await check_activity_burst(user_id, message)
-    
+    check_activity_burst(user_id, message)  # Call it without 'await'
+
     await bot.process_commands(message)
 
 ROLE_NAMES = {
