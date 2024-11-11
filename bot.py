@@ -5,7 +5,7 @@ import sqlite3
 import time
 
 # Import functions from db_server.py
-from db_server import update_user_xp, track_activity, check_boost_cooldown, update_boost_cooldown, check_activity_burst
+from db_server import update_user_xp, track_activity
 
 
 # Define your bot token and logging channel ID

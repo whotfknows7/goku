@@ -5,26 +5,11 @@ def update_user_xp(user_id, total_xp):
     # Open a connection to the SQLite database
     conn = sqlite3.connect('database.db')
     
-    try:
+
         # Create a cursor object to execute SQL commands
         cursor = conn.cursor()
 
-        # Create user_xp table if it doesn't exist
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user_xp (
-                user_id TEXT PRIMARY KEY,
-                xp INTEGER
-            )
-        ''')
-
-        # Create user_activity table to track last message timestamps
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user_activity (
-                user_id INTEGER PRIMARY KEY,
-                last_activity REAL
-            )
-        ''')
-
+  
         # Create xp_boost_cooldowns table to track boost cooldowns
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS xp_boost_cooldowns (
