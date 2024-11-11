@@ -26,6 +26,12 @@ cursor.execute('''
         last_boost_time REAL
     )
 ''')
+
+# Create indexes on frequently queried columns (user_id)
+cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_xp ON user_xp (user_id)')
+cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_activity ON user_activity (user_id)')
+cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_boosts ON xp_boost_cooldowns (user_id)')
+
 conn.commit()
 
 # Function to update user XP
@@ -69,4 +75,3 @@ def check_activity_burst(user_id, message=None):
         if current_time - last_activity < 300:  # Activity burst within 5 minutes
             return True
     return False
-
