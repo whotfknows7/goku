@@ -1,13 +1,14 @@
 import discord
 from discord.ext import commands, tasks
-from collections import defaultdict
-import time
 import re
 import sqlite3
-import asyncio
+import time
+
+# Import functions from db_server.py
+from db_server import update_user_xp, track_activity, check_boost_cooldown, update_boost_cooldown, check_activity_burst
 
 # Define your bot token and logging channel ID
-TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.G589lQ.pEYRw2zAtItUFeT24bhSoNZ7GD2DAJIkNpkFRI'  # Replace with your bot token
+TOKEN = 'YOUR_BOT_TOKEN'  # Replace with your bot token
 ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
 GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
 
@@ -21,7 +22,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 BOOST_DURATION = 300  # 5 minutes in seconds
 BOOST_COOLDOWN = 300  # 5 minutes in seconds
 MESSAGE_LIMIT = 10
-TIME_WINDOW = 300
+TIME_WINDOW = 300  # 5-minute window for burst
 
 # Regular expressions
 URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
@@ -33,26 +34,29 @@ def update_user_xp(user_id, xp_gain):
     cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (xp_gain, user_id))
     conn.commit()
 
-# Function to track user activity for burst
+# Function to track user activity for burst detection
 def track_activity(user_id):
     current_time = time.time()
     cursor.execute("INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
     conn.commit()
 
-# Check for activity burst every 2 seconds
-@tasks.loop(seconds=2)
-async def check_activity_burst():
-    current_time = time.time()
-    cursor.execute("SELECT user_id, last_activity FROM user_activity")
-    for user_id, last_activity in cursor.fetchall():
-        if current_time - last_activity < TIME_WINDOW:
-            # Apply XP boost logic if applicable
-            pass  # Expand this logic as needed
+# Function to check for activity burst and apply XP boost
+async def check_activity_burst(user_id, message):
+    if check_activity_burst(user_id):
+        if check_boost_cooldown(user_id):
+            xp_gain = 10  # For example, apply 10 XP boost
+            update_user_xp(user_id, xp_gain)
+            update_boost_cooldown(user_id)
+            await message.channel.send(f"{message.author.mention} has triggered an XP boost!")
+        else:
+            await message.channel.send(f"{message.author.mention}, you're on cooldown for XP boost!")
+    else:
+        # Track activity even without burst
+        track_activity(user_id)
 
 @bot.event
 async def on_ready():
     print(f"Bot has successfully logged in as {bot.user}")
-    check_activity_burst.start()
 
 @bot.event
 async def on_message(message):
@@ -69,6 +73,10 @@ async def on_message(message):
 
     update_user_xp(user_id, total_xp)
     track_activity(user_id)
+
+    # Check for activity burst and apply XP boost if applicable
+    await check_activity_burst(user_id, message)
+    
     await bot.process_commands(message)
 
 ROLE_NAMES = {
@@ -114,3 +122,4 @@ async def announce_role_update(member, role_name):
     log_channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
     await log_channel.send(role_info["message"].format(member=member))
 
+bot.run(TOKEN)
