@@ -157,6 +157,3 @@ def update_bulk_xp(user_xp_data):
 def get_top_xp_users(limit=10, offset=0):
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT ? OFFSET ?", (limit, offset))
     return cursor.fetchall()
-# Connect to the new SQLite database for daily data
-conn_daily = sqlite3.connect('daily_top_10.db', check_same_thread=False)
-cursor_daily = conn_daily.cursor()
