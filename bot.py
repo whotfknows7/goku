@@ -28,8 +28,11 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 EMOJI_REGEX = r":([^:]+):"
 
 # Database setup
-conn = sqlite3.connect('/app/database.db')  # Ensure database is stored in Glitch's `/app` directory
+db_path = '/app/database.db'
+conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
+
+
 
 # Create tables if not exist
 cursor.execute("""
@@ -38,13 +41,14 @@ CREATE TABLE IF NOT EXISTS user_xp (
     xp INTEGER DEFAULT 0
 )
 """)
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS user_activity (
     user_id INTEGER PRIMARY KEY,
     last_activity REAL
 )
 """)
-conn.commit()
+
 
 # Function to update user XP in the database
 def update_user_xp(user_id, xp_gain):
