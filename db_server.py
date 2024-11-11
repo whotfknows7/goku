@@ -8,16 +8,19 @@ class SQLiteConnectionPool:
     def __init__(self, db_file, pool_size=5):
         self.db_file = db_file
         self.pool = queue.Queue(pool_size)
+        self.lock = threading.Lock()  # To synchronize access to the pool
         for _ in range(pool_size):
-            conn = sqlite3.connect(self.db_file, check_same_thread=False)
+            conn = sqlite3.connect(self.db_file, check_same_thread=False, timeout=5)
             conn.row_factory = sqlite3.Row  # Enables access to columns by name
             self.pool.put(conn)
 
     def get_connection(self):
-        return self.pool.get()
+        with self.lock:
+            return self.pool.get()
 
     def release_connection(self, conn):
-        self.pool.put(conn)
+        with self.lock:
+            self.pool.put(conn)
 
 # Initialize the connection pool
 db_file = 'database.db'
@@ -31,8 +34,8 @@ def analyze_query(cursor, query, params=()):
     for step in query_plan:
         print(step)
 
-# Function to update user XP (wrapped in a transaction)
-def update_user_xp(user_id, total_xp):
+# Function to update user XP (wrapped in a transaction with retry)
+def update_user_xp(user_id, total_xp, retries=3):
     conn = pool.get_connection()
     cursor = conn.cursor()
 
@@ -44,9 +47,14 @@ def update_user_xp(user_id, total_xp):
         cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (total_xp, user_id))
         conn.commit()  # Commit the transaction
 
-    except Exception as e:
+    except sqlite3.DatabaseError as e:
         conn.rollback()  # Rollback in case of error
         print(f"Error updating user XP for {user_id}: {e}")
+        if retries > 0:
+            print("Retrying...")
+            return update_user_xp(user_id, total_xp, retries - 1)  # Retry on failure
+        else:
+            print("Max retries reached, operation failed.")
 
     finally:
         pool.release_connection(conn)
@@ -63,14 +71,14 @@ def track_activity(user_id):
         cursor.execute("INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
         conn.commit()
 
-    except Exception as e:
+    except sqlite3.DatabaseError as e:
         print(f"Error tracking activity for {user_id}: {e}")
 
     finally:
         pool.release_connection(conn)
 
-# Function to handle XP boost cooldown
-def check_boost_cooldown(user_id):
+# Function to handle XP boost cooldown with retry mechanism
+def check_boost_cooldown(user_id, retries=3):
     conn = pool.get_connection()
     cursor = conn.cursor()
 
@@ -87,15 +95,20 @@ def check_boost_cooldown(user_id):
                 return False
         return True
 
-    except Exception as e:
+    except sqlite3.DatabaseError as e:
         print(f"Error checking boost cooldown for {user_id}: {e}")
-        return True
+        if retries > 0:
+            print("Retrying...")
+            return check_boost_cooldown(user_id, retries - 1)  # Retry on failure
+        else:
+            print("Max retries reached, operation failed.")
+            return True
 
     finally:
         pool.release_connection(conn)
 
-# Function to update the XP boost cooldown
-def update_boost_cooldown(user_id):
+# Function to update the XP boost cooldown with retry mechanism
+def update_boost_cooldown(user_id, retries=3):
     conn = pool.get_connection()
     cursor = conn.cursor()
 
@@ -106,14 +119,19 @@ def update_boost_cooldown(user_id):
         cursor.execute("INSERT OR REPLACE INTO xp_boost_cooldowns (user_id, last_boost_time) VALUES (?, ?)", (user_id, current_time))
         conn.commit()
 
-    except Exception as e:
+    except sqlite3.DatabaseError as e:
         print(f"Error updating boost cooldown for {user_id}: {e}")
+        if retries > 0:
+            print("Retrying...")
+            return update_boost_cooldown(user_id, retries - 1)  # Retry on failure
+        else:
+            print("Max retries reached, operation failed.")
 
     finally:
         pool.release_connection(conn)
 
 # Function to check activity bursts and handle XP boosts
-def check_activity_burst(user_id):
+def check_activity_burst(user_id, message=None):
     conn = pool.get_connection()
     cursor = conn.cursor()
 
@@ -130,7 +148,7 @@ def check_activity_burst(user_id):
                 return True
         return False
 
-    except Exception as e:
+    except sqlite3.DatabaseError as e:
         print(f"Error checking activity burst for {user_id}: {e}")
         return False
 
