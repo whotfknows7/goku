@@ -8,7 +8,7 @@ import time
 from db_server import update_user_xp, track_activity, check_boost_cooldown, update_boost_cooldown, check_activity_burst
 
 # Define your bot token and logging channel ID
-TOKEN = 'YOUR_BOT_TOKEN'  # Replace with your bot token
+TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.G_6_dA.I1xV1PDWhfKav4Cd9-lb532V-RkyCU8Z2rEpSw'  # Replace with your bot token
 ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
 GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
 
