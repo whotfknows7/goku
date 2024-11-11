@@ -1,11 +1,9 @@
 import sqlite3
 import time
-def update_user_xp(user_id, total_xp):
+
 # Connect to the SQLite database
-conn = sqlite3.connect('databse.db')  # Replace with your database path
-  
-  # Create a cursor object to execute SQL commands
-    cursor = conn.cursor()
+conn = sqlite3.connect('database.db')  
+cursor = conn.cursor()
 
 # Create user_xp table if it doesn't exist
 cursor.execute('''
@@ -74,6 +72,6 @@ def check_activity_burst(user_id):
     return False
 
 # Commit changes and close connection
-def close_connection():
+
     conn.commit()
     conn.close()
