@@ -1,18 +1,20 @@
 import discord
 from discord.ext import commands, tasks
-import asyncio
-import re
+from collections import defaultdict
 import time
-from db_server import update_user_xp, track_activity
+import re
+import sqlite3
+import asyncio
 
-# Define your bot token and logging channel IDs
-TOKEN = 'YOUR_BOT_TOKEN'  # Replace with your bot token
+# Define your bot token and logging channel ID
+TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.G589lQ.pEYRw2zAtItUFeT24bhSoNZ7GD2DAJIkNpkFRI'  # Replace with your bot token
 ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
 GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
 
 # Define intents
 intents = discord.Intents.default()
 intents.members = True
+
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Constants for XP boost and activity burst
@@ -25,10 +27,50 @@ TIME_WINDOW = 300
 URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
 EMOJI_REGEX = r":([^:]+):"
 
+# Database setup
+db_path = '/app/database.db'
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
+
+
+
+# Create tables if not exist
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user_xp (
+    user_id INTEGER PRIMARY KEY,
+    xp INTEGER DEFAULT 0
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS user_activity (
+    user_id INTEGER PRIMARY KEY,
+    last_activity REAL
+)
+""")
+
+
+# Function to update user XP in the database
+def update_user_xp(user_id, xp_gain):
+    cursor.execute("INSERT OR IGNORE INTO user_xp (user_id, xp) VALUES (?, ?)", (user_id, 0))
+    cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (xp_gain, user_id))
+    conn.commit()
+
+# Function to track user activity for burst
+def track_activity(user_id):
+    current_time = time.time()
+    cursor.execute("INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
+    conn.commit()
+
+# Check for activity burst every 2 seconds
 @tasks.loop(seconds=2)
 async def check_activity_burst():
     current_time = time.time()
-    # Implement burst checking logic or call another method if necessary.
+    cursor.execute("SELECT user_id, last_activity FROM user_activity")
+    for user_id, last_activity in cursor.fetchall():
+        if current_time - last_activity < TIME_WINDOW:
+            # Apply XP boost logic if applicable
+            pass  # Expand this logic as needed
 
 @bot.event
 async def on_ready():
@@ -44,8 +86,8 @@ async def on_message(message):
     filtered_content = re.sub(URL_REGEX, "", message.content)
     filtered_content = ''.join(c for c in filtered_content if c.isalnum() or c.isspace())
 
-    character_xp = len(filtered_content.replace(" ", "")) * 0.1
-    emoji_xp = len(re.findall(EMOJI_REGEX, message.content)) * 0.5
+    character_xp = len(filtered_content.replace(" ", ""))
+    emoji_xp = len(re.findall(EMOJI_REGEX, message.content)) * 5
     total_xp = character_xp + emoji_xp
 
     update_user_xp(user_id, total_xp)
@@ -53,7 +95,34 @@ async def on_message(message):
     await bot.process_commands(message)
 
 ROLE_NAMES = {
-    # Define roles and messages as before
+    "🧔Homo Sapien": {
+        "message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!",
+        "has_perms": True
+    },
+    "🏆Homie": {
+        "message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!",
+        "has_perms": True
+    },
+    "🥉VETERAN": {
+        "message": "🎉 Congrats {member.mention}! You've become a **VETERAN** 🥉 member!",
+        "has_perms": False
+    },
+    "🥈ELITE": {
+        "message": "🎉 Congrats {member.mention}! You've become an **ELITE** 🥈 member!",
+        "has_perms": False
+    },
+    "🥇MYTHIC": {
+        "message": "🎉 Congrats {member.mention}! You've become a **MYTHIC** 🥇 member!",
+        "has_perms": False
+    },
+    "⭐VIP": {
+        "message": "🎉 Congrats {member.mention}! You've become a **VIP** ⭐ member!",
+        "has_perms": False
+    },
+    "✨LEGENDARY": {
+        "message": "🎉 Congrats {member.mention}! You've become a **LEGENDARY** ✨ member!",
+        "has_perms": False
+    },
 }
 
 @bot.event
