@@ -1,9 +1,14 @@
 import sqlite3
 import time
+import json
 
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
+
+# Clan Role IDs (Please replace these with actual Role IDs)
+role_id_clan1 = "1245407423917854754"  # Example Clan 1 Role ID
+role_id_clan2 = "1247225208700665856"  # Example Clan 2 Role ID
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS user_xp (
@@ -26,15 +31,69 @@ cursor.execute('''
     )
 ''')
 
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS user_roles (
+        user_id TEXT PRIMARY KEY,
+        clan_role TEXT  -- e.g., 'Clan1', 'Clan2', etc.
+    )
+''')
+
 conn.commit()
 
+# Function to fetch the top 10 users and their clan roles
+def fetch_top_10_users():
+    cursor.execute("""
+        SELECT u.user_id, u.xp, r.clan_role
+        FROM user_xp u
+        LEFT JOIN user_roles r ON u.user_id = r.user_id
+        ORDER BY u.xp DESC
+        LIMIT 10
+    """)
+    return cursor.fetchall()
 
-# Create indexes on frequently queried columns (user_id)
-cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_xp ON user_xp (user_id)')
-cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_activity ON user_activity (user_id)')
-cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_boosts ON xp_boost_cooldowns (user_id)')
+# Function to save the top 10 users' daily XP and clan to a file
+def save_top_users_to_file():
+    top_users = fetch_top_10_users()
+    
+    # Prepare the data
+    data = []
+    for user in top_users:
+        user_data = {
+            'user_id': user[0],
+            'xp': user[1],
+            'clan_role': user[2] if user[2] else "No Clan"
+        }
+        data.append(user_data)
+    
+    # Save to a JSON file for easy record-keeping
+    with open("top_10_users.json", "w") as file:
+        json.dump(data, file, indent=4)
 
-conn.commit()
+# Function to reset the database every 24 hours
+def reset_database():
+    while True:
+        # Wait for 24 hours (86400 seconds)
+        time.sleep(86400)
+        
+        # Save the top 10 users to a file just before resetting
+        save_top_users_to_file()
+        
+        # Reset the user XP table
+        cursor.execute("DELETE FROM user_xp")
+        
+        # Reset the user activity table
+        cursor.execute("DELETE FROM user_activity")
+        
+        # Reset the XP boost cooldowns
+        cursor.execute("DELETE FROM xp_boost_cooldowns")
+        
+        # Optionally reset the user_roles table (if needed)
+        cursor.execute("DELETE FROM user_roles")
+        
+        # Commit the changes
+        conn.commit()
+
+        print("Database has been reset for the next day.")
 
 # Function to update user XP with transaction management
 def update_user_xp(user_id, total_xp):
@@ -82,7 +141,6 @@ def check_boost_cooldown(user_id):
                 return False
     return True
 
-
 # Function to update the XP boost cooldown
 def update_boost_cooldown(user_id):
     try:
@@ -96,6 +154,7 @@ def update_boost_cooldown(user_id):
         # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error updating boost cooldown for user {user_id}: {e}\n")
+
 # Function to check activity bursts and handle XP boosts
 def check_activity_burst(user_id, message=None):
     current_time = time.time()
@@ -107,6 +166,7 @@ def check_activity_burst(user_id, message=None):
         if current_time - last_activity < 300:  # Activity burst within 5 minutes
             return True
     return False
+
 def cleanup_invalid_users():
     try:
         cursor.execute("BEGIN TRANSACTION;")
@@ -121,6 +181,7 @@ def cleanup_invalid_users():
         # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error during cleanup: {e}\n")
+
 def check_database_integrity():
     try:
         cursor.execute("PRAGMA integrity_check;")
@@ -137,6 +198,7 @@ def check_database_integrity():
         # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error performing integrity check: {e}\n")
+
 def update_bulk_xp(user_xp_data):
     try:
         cursor.execute("BEGIN TRANSACTION;")
@@ -149,3 +211,8 @@ def update_bulk_xp(user_xp_data):
         # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error bulk updating XP: {e}\n")
+
+# Start the reset process in a separate thread or process to allow the bot to continue running
+import threading
+reset_thread = threading.Thread(target=reset_database)
+reset_thread.start()
