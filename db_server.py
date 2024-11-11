@@ -5,7 +5,7 @@ def update_user_xp(user_id, total_xp):
     # Open a connection to the SQLite database
     conn = sqlite3.connect('database.db')
     
-
+try:
         # Create a cursor object to execute SQL commands
         cursor = conn.cursor()
 
@@ -18,11 +18,7 @@ def update_user_xp(user_id, total_xp):
             )
         ''')
 
-        # Function to update user XP
-        cursor.execute("INSERT OR IGNORE INTO user_xp (user_id, xp) VALUES (?, ?)", (user_id, 0))
-        cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (total_xp, user_id))
-        conn.commit()
-
+   
         # Function to track user activity for burst detection
         def track_activity(user_id):
             current_time = time.time()
