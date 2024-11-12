@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Load token from environment variable for security
-TOKEN = process.env.DISCORD_BOT_TOKEN;
+TOKEN = MTMwMzQyNjkzMzU4MDc2MzIzNg.Gfa6na.X21jZAdDaiNStwNJK3TId7qWWZrbuGdBlAKA7Q'
 if not TOKEN:
     logger.error("Bot token not found. Set the DISCORD_BOT_TOKEN environment variable.")
     exit(1)
