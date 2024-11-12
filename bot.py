@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 # Import functions from db_server.py
 from db_server import update_user_xp, track_activity, check_boost_cooldown, update_boost_cooldown, check_activity_burst
 
-TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.GKuML2.ui6KSSwq0dL-v2DWk3aYtPsCvPYm1WgFzBiFTM'
+TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.Gfa6na.X21jZAdDaiNStwNJK3TId7qWWZrbuGdBlAKA7Q'
 ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
 GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
-LEADERBOARD_CHANNEL_ID = 123456789012345678  # Replace with your log channel ID
+LEADERBOARD_CHANNEL_ID = 1301183910838796460  # Replace with your log channel ID
 # Define intents
 intents = discord.Intents.default()
 intents.members = True
@@ -82,7 +82,9 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     top_users = cursor.fetchall()
     return top_users
-
+def get_top_xp_users(limit=10, offset=0):
+    cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT ? OFFSET ?", (limit, offset))
+    return cursor.fetchall()
 # Simulate fetching pfp and nickname for a user ID
 async def get_user_data(user_id):
     user = await bot.fetch_user(int(user_id))
@@ -90,7 +92,9 @@ async def get_user_data(user_id):
 
 # Create a formatted leaderboard embed
 async def create_leaderboard_embed(top_users):
-    embed = discord.Embed(title="🏆 Daily Leaderboard", color=discord.Color.blue())
+    embed = discord.Embed(title="🏆 Daily Leaderboard",
+description="Top 10 users of the day:",
+ color=discord.Color.blue())
     embed.set_footer(text="Leaderboard refreshes every 15 seconds")
     
     for rank, (user_id, xp) in enumerate(top_users, 1):
@@ -106,7 +110,7 @@ async def create_leaderboard_embed(top_users):
 
 @tasks.loop(seconds=15)
 async def update_leaderboard():
-    channel = bot.get_channel(YOUR_CHANNEL_ID)  # Replace with your channel ID
+    channel = bot.get_channel(1301183910838796460)  # Replace with your channel ID
     top_users = fetch_top_users()
     embed = await create_leaderboard_embed(top_users)
     
