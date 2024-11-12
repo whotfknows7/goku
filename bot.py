@@ -4,6 +4,7 @@ import re
 import time
 import os
 import sqlite3
+from operator import itemgetter
 import logging
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -76,6 +77,49 @@ async def on_message(message):
     # Allow commands to be processed after custom logic
     await bot.process_commands(message)
 
+# Fetch top 10 users by XP
+def fetch_top_users():
+    cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
+    top_users = cursor.fetchall()
+    return top_users
+
+# Simulate fetching pfp and nickname for a user ID
+async def get_user_data(user_id):
+    user = await bot.fetch_user(int(user_id))
+    return user.display_name, str(user.avatar.url)
+
+# Create a formatted leaderboard embed
+async def create_leaderboard_embed(top_users):
+    embed = discord.Embed(title="🏆 Daily Leaderboard", color=discord.Color.blue())
+    embed.set_footer(text="Leaderboard refreshes every 15 seconds")
+    
+    for rank, (user_id, xp) in enumerate(top_users, 1):
+        nickname, avatar_url = await get_user_data(user_id)
+        embed.add_field(
+            name=f"#{rank} {nickname}",
+            value=f"XP: {xp}",
+            inline=False
+        )
+        embed.set_thumbnail(url=avatar_url if rank == 1 else embed.thumbnail.url)
+    
+    return embed
+
+@tasks.loop(seconds=15)
+async def update_leaderboard():
+    channel = bot.get_channel(YOUR_CHANNEL_ID)  # Replace with your channel ID
+    top_users = fetch_top_users()
+    embed = await create_leaderboard_embed(top_users)
+    
+    message = await channel.history(limit=1).flatten()  # Get the latest message
+    if message:
+        await message[0].edit(embed=embed)
+    else:
+        await channel.send(embed=embed)
+
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user.name}")
+    update_leaderboard.start()  # Start the leaderboard task
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {
