@@ -82,7 +82,6 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     top_users = cursor.fetchall()
     return top_users
-cjr
 # Simulate fetching pfp and nickname for a user ID
 async def get_user_data(user_id):
     user = await bot.fetch_user(int(user_id))
