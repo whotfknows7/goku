@@ -3,6 +3,8 @@ from discord.ext import commands, tasks
 import re
 import os
 import logging
+import emoji  # Required for Unicode emoji detection
+from emoji import is_emoji
 from db_server import (
     update_user_xp,
     track_activity,
@@ -10,14 +12,13 @@ from db_server import (
     update_boost_cooldown,
     check_activity_burst
 )
-import emoji  # Required for Unicode emoji detection
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Load token from environment variable for security
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+TOKEN = process.env.[]
 if not TOKEN:
     logger.error("Bot token not found. Set the DISCORD_BOT_TOKEN environment variable.")
     exit(1)
@@ -56,13 +57,23 @@ async def on_message(message):
         return
 
     user_id = message.author.id
+
+    # Remove URLs
     filtered_content = re.sub(URL_REGEX, "", message.content)
+
+    # Remove non-alphanumeric characters except spaces
     filtered_content = ''.join(c for c in filtered_content if c.isalnum() or c.isspace())
 
     # XP Calculation
     character_xp = len(filtered_content.replace(" ", "")) * 0.1
-    custom_emoji_count = message.content.count('<:')
-    unicode_emoji_count = sum(1 for c in message.content if c in emoji.UNICODE_EMOJI_ENGLISH)
+
+    # Custom emojis
+    custom_emoji_count = count_custom_emojis(message.content)
+
+    # Unicode emojis
+    unicode_emoji_count = sum(1 for c in message.content if c in is_emoji)
+
+    # Total XP
     emoji_xp = (custom_emoji_count + unicode_emoji_count) * 0.5
     total_xp = character_xp + emoji_xp
 
