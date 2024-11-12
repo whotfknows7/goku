@@ -6,7 +6,7 @@ import os
 # Import functions from db_server.py
 from db_server import update_user_xp, track_activity, check_boost_cooldown, update_boost_cooldown, check_activity_burst
 
-TOKEN = MTMwMzQyNjkzMzU4MDc2MzIzNg.GBNjfR.0TLNjKIh17zO07WFZsIhGu6xbY_kemLvxvFZvI'
+TOKEN = ''
 ROLE_LOG_CHANNEL_ID = 1251143629943345204  # Replace with your role log channel ID
 GENERAL_LOG_CHANNEL_ID = 1301183910838796460  # Replace with your general log channel ID
 
@@ -26,26 +26,34 @@ TIME_WINDOW = 300  # 5-minute window for burst
 URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
 EMOJI_REGEX = r":([^:]+):"
 
-# Function to update user XP in the database
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user}')
+
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
+    # Skip processing if the message is sent by a bot
+    if message.author.bot:
         return
 
+    user = message.author
     user_id = message.author.id
     filtered_content = re.sub(URL_REGEX, "", message.content)
     filtered_content = ''.join(c for c in filtered_content if c.isalnum() or c.isspace())
 
+    # Calculate XP
     character_xp = len(filtered_content.replace(" ", "")) * 0.1
     emoji_xp = len(re.findall(EMOJI_REGEX, message.content)) * 0.5
     total_xp = character_xp + emoji_xp
 
+    # Update XP in the database
     update_user_xp(user_id, total_xp)
     track_activity(user_id)
 
     # Check for activity burst and apply XP boost if applicable
     check_activity_burst(user_id, message)  # Call it without 'await'
 
+    # Allow commands to be processed after custom logic
     await bot.process_commands(message)
 
 ROLE_NAMES = {
@@ -78,7 +86,6 @@ ROLE_NAMES = {
         "has_perms": False
     },
 }
-
 
 @bot.event
 async def on_member_update(before, after):
