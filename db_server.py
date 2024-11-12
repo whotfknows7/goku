@@ -113,6 +113,11 @@ def cleanup_invalid_users():
 
         # Remove users with negative XP
         cursor.execute("DELETE FROM user_xp WHERE xp < 0")
+
+        # Remove users with invalid activity timestamps (older than 30 days)
+        cutoff_time = time.time() - (30 * 24 * 60 * 60)  # 30 days ago
+        cursor.execute("DELETE FROM user_activity WHERE last_activity < ?", (cutoff_time,))
+
         conn.commit()
 
     except sqlite3.Error as e:
