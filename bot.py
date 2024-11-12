@@ -94,7 +94,9 @@ def fetch_top_users():
 
 async def get_user_data(user_id):
     user = await bot.fetch_user(user_id)
-    return user.display_name, str(user.avatar.url)
+    display_name = user.display_name
+    avatar_url = user.display_avatar.url  # Modern approach
+    return display_name, avatar_url
 
 async def create_leaderboard_embed(top_users):
     embed = discord.Embed(
@@ -111,7 +113,8 @@ async def create_leaderboard_embed(top_users):
             value=f"XP: {xp}",
             inline=False
         )
-        if rank == 1:
+        # Only set thumbnail for the top user
+        if rank == 1 and avatar_url:
             embed.set_thumbnail(url=avatar_url)
 
     return embed
