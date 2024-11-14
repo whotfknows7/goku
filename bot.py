@@ -155,6 +155,8 @@ async def create_leaderboard_image(top_users):
     img.save("leaderboard.png")
 
     return "leaderboard.png"
+# Variable to store the previous leaderboard message
+leaderboard_message = None
 
 # Task to update the leaderboard
 @tasks.loop(seconds=20)
@@ -171,8 +173,15 @@ async def update_leaderboard():
         # Generate the leaderboard image
         image_path = await create_leaderboard_image(top_users)
 
-        # Send the image as an attachment
-        await channel.send(file=discord.File(image_path))
+        # Check if the leaderboard message already exists
+        global leaderboard_message
+        if leaderboard_message is None:
+            # Send the new leaderboard message if it doesn't exist yet
+            leaderboard_message = await channel.send(file=discord.File(image_path))
+        else:
+            # Edit the existing leaderboard message
+            await leaderboard_message.edit(content="Updated Leaderboard")  # Edit text content
+            await leaderboard_message.edit(file=discord.File(image_path))  # Edit the file (image)
 
     except discord.HTTPException as e:
         if e.status == 429:
