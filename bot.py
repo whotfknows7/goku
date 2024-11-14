@@ -122,26 +122,31 @@ async def create_leaderboard_image(top_users):
     # Image size and padding
     WIDTH, HEIGHT = 1000, 600
     PADDING = 10
+    FONT_SIZE = 40  # Default font size (we'll scale this based on PFP size)
+
     img = Image.new('RGB', (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
-    # Font
-    font = ImageFont.load_default()
+    # Load the font, make it large based on the PFP size
+    font = ImageFont.load_default()  # You can replace this with a custom font for better appearance
 
     # Initial position for the leaderboard content
     y_position = PADDING
 
-    # Loop through the top users to add their info to the image
     for rank, (user_id, xp) in enumerate(top_users, 1):
         nickname, avatar_url = await get_user_data(user_id)
 
         # Fetch user profile picture (resize it for the image)
         response = requests.get(avatar_url)
         img_pfp = Image.open(BytesIO(response.content))
-        img_pfp = img_pfp.resize((50, 50))  # Resize to 50x50 pixels
+
+        img_pfp = img_pfp.resize((50, 50))  # Resize to 50x50 pixels (PFP size)
 
         # Draw the profile picture (left-aligned)
         img.paste(img_pfp, (PADDING, y_position))
+
+        # Set the font size based on PFP size
+        font = ImageFont.truetype("/path/to/font.ttf", 50)  # Increase font size dynamically (50px for example)
 
         # Draw the rank, nickname, and points
         draw.text((PADDING + 60, y_position), f"#{rank} {nickname}", font=font, fill="black")
@@ -150,12 +155,14 @@ async def create_leaderboard_image(top_users):
         # Move to the next row
         y_position += 60  # Adjust space between rows
 
-    # Save the image in memory
-    img_binary = BytesIO()  # Create an open BytesIO buffer
-    img.save(img_binary, format='PNG')
-    img_binary.seek(0)  # Go to the start of the BytesIO buffer
+    # Crop the image (e.g., we want a cropped version for the leaderboard size)
+    img_cropped = img.crop((0, 0, WIDTH, y_position))  # Crops the image based on content size
 
-    return img_binary  # Return the open BytesIO buffer (not closed)
+    # Save the image in memory
+    with BytesIO() as img_binary:
+        img_cropped.save(img_binary, format='PNG')
+        img_binary.seek(0)  # Go to the start of the BytesIO buffer
+        return img_binary
 
 @tasks.loop(seconds=20)  # Run every 20 seconds
 async def update_leaderboard():
