@@ -26,8 +26,6 @@ rollbar.init(
 )
 rollbar.report_message('Rollbar is configured correctly', 'info')
 
-# Add logger configuration to handle UTF-8 properly
-logging.basicConfig(level=logging.DEBUG, encoding='utf-8')  # Ensure UTF-8 encoding in logs
 
 # Channel IDs
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
@@ -56,12 +54,6 @@ leaderboard_message = None
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
     return len(re.findall(custom_emoji_pattern, content))
-
-# Bot event when ready
-@bot.event
-async def on_ready():
-    logger.info(f"Bot logged in as {bot.user.name}")
-    update_leaderboard.start()  # This will start the loop
 
 # Bot event for incoming messages
 @bot.event
@@ -118,16 +110,12 @@ async def get_user_data(user_id):
     return None, None  # In case of error, return None
 
 async def create_leaderboard_image(top_users):
-    WIDTH, HEIGHT = 800, 1000
+    WIDTH, HEIGHT = 1000, 600
     PADDING = 20
-    PFP_SIZE = 70
-    LINE_HEIGHT = 100
-    BACKGROUND_COLOR = (40, 40, 40)
-    TEXT_COLOR = (255, 255, 255)
-    DIVIDER_COLOR = (20, 20, 20)
-    RANK_COLORS = {1: (255, 215, 0), 2: (192, 192, 192), 3: (205, 127, 50)}  # Gold, Silver, Bronze
+    PFP_SIZE = 80  # Match PFP size to the sample image
+    LINE_SPACING = 20
 
-    img = Image.new('RGB', (WIDTH, HEIGHT), color=BACKGROUND_COLOR)
+    img = Image.new('RGB', (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
     font = ImageFont.load_default()
 
@@ -135,77 +123,55 @@ async def create_leaderboard_image(top_users):
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
         nickname, avatar_url = await get_user_data(user_id)
+
+        # Fetch and resize PFP
         response = requests.get(avatar_url)
         img_pfp = Image.open(BytesIO(response.content)).resize((PFP_SIZE, PFP_SIZE))
-        img_pfp = ImageOps.fit(img_pfp, (PFP_SIZE, PFP_SIZE), method=0, centering=(0.5, 0.5))
+        img.paste(img_pfp, (PADDING, y_position))
 
-        # Draw divider
-        draw.rectangle([0, y_position, WIDTH, y_position + LINE_HEIGHT], fill=DIVIDER_COLOR)
-        
-        # Paste profile picture
-        img.paste(img_pfp, (PADDING, y_position + (LINE_HEIGHT - PFP_SIZE) // 2))
+        # Text formatting
+        text_sample = f"#{rank} {nickname} - Points: {int(xp)}"
+        text_x = PADDING + PFP_SIZE + 10  # Text beside PFP
+        text_y = y_position + (PFP_SIZE - draw.textbbox((0, 0), text_sample, font=font)[3]) // 2
 
-        # Rank
-        rank_color = RANK_COLORS.get(rank, TEXT_COLOR)
-        rank_text = f"#{rank}"
-        draw.text((PADDING + PFP_SIZE + 20, y_position + 30), rank_text, font=font, fill=rank_color)
+        draw.text((text_x, text_y), text_sample, font=font, fill="black")
 
-        # Username and Level
-        user_text = f"{nickname} • LVL: {xp}"
-        draw.text((PADDING + PFP_SIZE + 100, y_position + 30), user_text, font=font, fill=TEXT_COLOR)
-
-        y_position += LINE_HEIGHT
+        # Move to next row
+        y_position += PFP_SIZE + LINE_SPACING
 
     img_cropped = img.crop((0, 0, WIDTH, y_position + PADDING))
 
     with BytesIO() as img_binary:
         img_cropped.save(img_binary, format='PNG')
         img_binary.seek(0)
-        return img_binaryks.loop(seconds=20)
-
-@tasks.loop(seconds=20)  # Runs the task every 20 seconds
-# Task to periodically update the leaderboard
+        return img_binary
+@tasks.loop(seconds=20)
 async def update_leaderboard():
-    global leaderboard_message
-
-    image = None  # Initialize 'image' to avoid UnboundLocalError
-
+    global leaderboard_message  # Declare global to modify the message variable
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
         if not channel:
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
-        # Fetch leaderboard data
         top_users = fetch_top_users()
-
-        # Generate leaderboard image
         image = await create_leaderboard_image(top_users)
 
-        # Ensure that the text being sent is UTF-8 encoded
-        content = "Here is the updated leaderboard!"
-        content = content.encode('utf-8').decode('utf-8')  # Ensure the string is UTF-8 encoded
-
-        # Send or update leaderboard message
         if leaderboard_message is None:
             leaderboard_message = await channel.send(
-                content=content,
+                content="Here is the updated leaderboard!",
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
         else:
-            try:
-                await leaderboard_message.delete()
-            except discord.HTTPException as delete_error:
-                logger.error(f"Error deleting leaderboard message: {delete_error}")
-
+            await leaderboard_message.delete()
             leaderboard_message = await channel.send(
-                content=content,
+                content="Here is the updated leaderboard!",
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
 
     except discord.HTTPException as e:
         if e.status == 429:
-            retry_after = int(e.response.headers.get('Retry-After', 5))  # Default to 5 seconds if not provided
+            retry_after = int(e.response.headers.get('X-RateLimit-Reset', time.time()))
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
         else:
@@ -214,21 +180,6 @@ async def update_leaderboard():
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
 
-    finally:
-        if image:
-            image.close()  # Ensure image buffer is closed
-
-# Starting the task when bot is ready
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user}')
-    update_leaderboard.start()  # Start the task loop
-
-# This will start the task when the bot is ready
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user}')
-    update_leaderboard.start()  # Start the task loop
 # Role update handling
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
