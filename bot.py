@@ -194,53 +194,37 @@ def fetch_top_users():
 
     return cursor.fetchall()
 
-
-
-# Async function to get user data with rate-limiting handling
-async def get_user_data(user_id):
-
+async def get_user_data(guild_id, user_id):
     retry_after = 0
-
     while retry_after == 0:
-
         try:
+            guild = bot.get_guild(guild_id)
+            if not guild:
+                return None, None  # Return None if guild not found
 
-            user = await bot.fetch_user(user_id)
-
-            nickname = user.display_name
-
-            avatar_url = user.avatar_url if user.avatar else None
-
+            member = await guild.fetch_member(user_id)  # Fetch Member object for display name
+            nickname = member.display_name  # Get server-specific nickname or username if no nickname
+            avatar_url = member.avatar_url if member.avatar else None
             return nickname, avatar_url
-
         except discord.HTTPException as e:
-
-            if e.status == 429:
-
-                # If rate-limited, get the retry time
-
+            if e.status == 429:  # Rate-limited
                 retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
-
                 wait_time = retry_after - time.time()
-
                 if wait_time > 0:
-
                     logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
-
                     await asyncio.sleep(wait_time)
-
+                else:
+                    raise
             else:
+                return None, None  # In case of error, return None
 
-                raise e
-
-    return None, None  # In case of error, return None
-
-
-async def create_leaderboard_image(top_users):
+async def create_leaderboard_image(guild_id, top_users):
     # Image size and padding
     WIDTH, HEIGHT = 1000, 600
     PADDING = 10
-    img = Image.new('RGB', (WIDTH, HEIGHT), color='white')
+
+    # Create a blank image
+    img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
     # Font
@@ -251,13 +235,13 @@ async def create_leaderboard_image(top_users):
 
     # Loop through the top users to add their info to the image
     for rank, (user_id, xp) in enumerate(top_users, 1):
-        nickname, avatar_url = await get_user_data(user_id)
-
-        # If no nickname found, fallback to using 'Unknown User'
+        nickname, avatar_url = await get_user_data(guild_id, user_id)
+        
+        # Fallback to using "Unknown User" if no nickname found
         if not nickname:
             nickname = "Unknown User"
 
-        # Fetch user profile picture (resize it for the image)
+        # Fetch user profile picture and resize it for the image
         try:
             response = requests.get(avatar_url)
             img_pfp = Image.open(BytesIO(response.content))
@@ -269,20 +253,24 @@ async def create_leaderboard_image(top_users):
         # Draw the profile picture (left-aligned)
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Draw the rank, nickname, and points (using nickname here)
-        draw.text((PADDING + 60, y_position), f"#{rank} {nickname}", font=font, fill="black")
+        # Draw the rank, nickname, and points
+        draw.text((PADDING + 60, y_position), f"{rank}. {nickname}", font=font, fill="black")
         draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
 
         # Move to the next row
         y_position += 60  # Adjust space between rows
 
     # Save the image in memory
-    img_binary = BytesIO()  # Create an open BytesIO buffer
-    img.save(img_binary, format='PNG')  # Save directly into the BytesIO buffer
+    img_binary = BytesIO()
+    img.save(img_binary, format="PNG")  # Save directly into the BytesIO buffer
     img_binary.seek(0)  # Go to the start of the BytesIO buffer
 
     return img_binary  # Return the open BytesIO buffer (not closed)
 
+@tasks.loop(seconds=20)  # Run every 20 seconds
+async def update_leaderboard():
+    # Placeholder function for updating leaderboard
+    pass
 @tasks.loop(seconds=20)  # Run every 20 seconds
 async def update_leaderboard():
     try:
