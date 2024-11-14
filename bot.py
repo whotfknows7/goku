@@ -237,148 +237,91 @@ async def get_user_data(user_id):
     return None, None  # In case of error, return None
 
 
-
 async def create_leaderboard_image(top_users):
-
     # Image size and padding
-
     WIDTH, HEIGHT = 1000, 600
-
     PADDING = 10
-
     img = Image.new('RGB', (WIDTH, HEIGHT), color='white')
-
     draw = ImageDraw.Draw(img)
 
-
-
     # Font
-
     font = ImageFont.load_default()
 
-
-
     # Initial position for the leaderboard content
-
     y_position = PADDING
 
-
-
     # Loop through the top users to add their info to the image
-
     for rank, (user_id, xp) in enumerate(top_users, 1):
-
         nickname, avatar_url = await get_user_data(user_id)
 
-
+        # Debugging: Log user data to ensure it's being fetched correctly
+        logger.info(f"Rank: {rank}, Nickname: {nickname}, Avatar: {avatar_url}, XP: {xp}")
 
         # Fetch user profile picture (resize it for the image)
-
-        response = requests.get(avatar_url)
-
-        img_pfp = Image.open(BytesIO(response.content))
-
-        img_pfp = img_pfp.resize((50, 50))  # Resize to 50x50 pixels
-
-
+        try:
+            response = requests.get(avatar_url)
+            img_pfp = Image.open(BytesIO(response.content))
+            img_pfp = img_pfp.resize((50, 50))  # Resize to 50x50 pixels
+        except Exception as e:
+            logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
+            img_pfp = Image.new('RGB', (50, 50), color='grey')  # Placeholder if avatar fails
 
         # Draw the profile picture (left-aligned)
-
         img.paste(img_pfp, (PADDING, y_position))
 
-
-
         # Draw the rank, nickname, and points
-
         draw.text((PADDING + 60, y_position), f"#{rank} {nickname}", font=font, fill="black")
-
         draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
 
-
-
         # Move to the next row
-
         y_position += 60  # Adjust space between rows
 
-
-
     # Save the image in memory
+    img_binary = BytesIO()  # Create an open BytesIO buffer
+    img.save(img_binary, format='PNG')
+    img_binary.seek(0)  # Go to the start of the BytesIO buffer
 
-    with BytesIO() as img_binary:
+    # Debugging: Save image to disk to inspect
+    img.save("leaderboard_debug.png")  # Save to disk for inspection (you can remove this in production)
 
-        img.save(img_binary, format='PNG')
+    return img_binary  # Return the open BytesIO buffer (not closed)
 
-        img_binary.seek(0)  # Go to the start of the BytesIO buffer
-
-        return img_binary
-
-
-
+@tasks.loop(seconds=20)  # Run every 20 seconds
 async def update_leaderboard():
-
     try:
-
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
 
         if not channel:
-
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
-
             return
 
-
-
         # Fetch the leaderboard data
-
         top_users = fetch_top_users()
 
-
-
         # Generate the leaderboard image
-
         image = await create_leaderboard_image(top_users)
 
-
-
-        # Check if the leaderboard message already exists
-
+        # Ensure image is passed as a file, not trying to log or serialize the object
         global leaderboard_message
 
         if leaderboard_message is None:
-
             # Send the new leaderboard message if it doesn't exist yet
-
             leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
-
         else:
-
             # Edit the existing leaderboard message
-
             await leaderboard_message.edit(content="Updated Leaderboard")  # Edit text content
-
             await leaderboard_message.edit(file=discord.File(image, filename="leaderboard.png"))  # Edit the file (image)
 
-
-
     except discord.HTTPException as e:
-
         if e.status == 429:
-
             retry_after = int(e.retry_after)
-
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
-
             await asyncio.sleep(retry_after)
-
         else:
-
             logger.error(f"HTTPException while updating leaderboard: {e}")
 
     except Exception as e:
-
         logger.error(f"Unexpected error in update_leaderboard: {e}")
-
-
 
 # Role update handling
 
