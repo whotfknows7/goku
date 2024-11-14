@@ -157,11 +157,11 @@ async def create_leaderboard_image(top_users):
 
     return img_binary  # Return the open BytesIO buffer (not closed)
 
-# Add the loop decorator to the function
-@tasks.loop(seconds=20)  # For example, run every 5 minutes
+@tasks.loop(seconds=20)  # Run every 20 seconds
 async def update_leaderboard():
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+
         if not channel:
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
@@ -172,20 +172,21 @@ async def update_leaderboard():
         # Generate the leaderboard image
         image = await create_leaderboard_image(top_users)
 
-        # Check if the leaderboard message already exists
-        global leaderboard_message
+        global leaderboard_message  # Use global to access the message variable
 
         if leaderboard_message is None:
-            # Send the new leaderboard message if it doesn't exist yet
+            # If there's no leaderboard message yet, send a new one
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
                 file=discord.File(image, filename="leaderboard.png")
             )
         else:
-            # Delete the old leaderboard message and send a new one
-            await leaderboard_message.delete()
+            # If the leaderboard message exists, delete it and send a new one
+            try:
+                await leaderboard_message.delete()
+            except discord.HTTPException as delete_error:
+                logger.error(f"Error deleting leaderboard message: {delete_error}")
 
-            # Send the updated leaderboard
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
                 file=discord.File(image, filename="leaderboard.png")
@@ -193,14 +194,15 @@ async def update_leaderboard():
 
     except discord.HTTPException as e:
         if e.status == 429:
-            retry_after = int(e.retry_after)
+            # Handle rate-limiting by waiting for the retry time
+            retry_after = int(e.response.headers.get('X-RateLimit-Reset', time.time()))
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
         else:
             logger.error(f"HTTPException while updating leaderboard: {e}")
+
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
-
 # Role update handling
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
