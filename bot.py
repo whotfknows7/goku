@@ -254,9 +254,6 @@ async def create_leaderboard_image(top_users):
     for rank, (user_id, xp) in enumerate(top_users, 1):
         nickname, avatar_url = await get_user_data(user_id)
 
-        # Debugging: Log user data to ensure it's being fetched correctly
-        logger.info(f"Rank: {rank}, Nickname: {nickname}, Avatar: {avatar_url}, XP: {xp}")
-
         # Fetch user profile picture (resize it for the image)
         try:
             response = requests.get(avatar_url)
@@ -264,7 +261,7 @@ async def create_leaderboard_image(top_users):
             img_pfp = img_pfp.resize((50, 50))  # Resize to 50x50 pixels
         except Exception as e:
             logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
-            img_pfp = Image.new('RGB', (50, 50), color='grey')  # Placeholder if avatar fails
+            img_pfp = Image.new('RGB', (50, 50), color='grey')  # Placeholder if avatar fetch fails
 
         # Draw the profile picture (left-aligned)
         img.paste(img_pfp, (PADDING, y_position))
@@ -278,16 +275,13 @@ async def create_leaderboard_image(top_users):
 
     # Save the image in memory
     img_binary = BytesIO()  # Create an open BytesIO buffer
-    img.save(img_binary, format='PNG')
+    img.save(img_binary, format='PNG')  # Save directly into the BytesIO buffer
     img_binary.seek(0)  # Go to the start of the BytesIO buffer
 
-    # Debugging: Save image to disk to inspect
-    img.save("leaderboard_debug.png")  # Save to disk for inspection (you can remove this in production)
-
     return img_binary  # Return the open BytesIO buffer (not closed)
-
 @tasks.loop(seconds=20)  # Run every 20 seconds
 async def update_leaderboard():
+
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
 
