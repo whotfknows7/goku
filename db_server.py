@@ -46,11 +46,9 @@ def update_user_xp(user_id, total_xp):
     except sqlite3.Error as e:
         conn.rollback()
         print(f"Error updating XP for user {user_id}: {e}")
-        # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error updating XP for user {user_id}: {e}\n")
 
-# Function to track user activity for burst detection
 def track_activity(user_id):
     try:
         cursor.execute("BEGIN TRANSACTION;")

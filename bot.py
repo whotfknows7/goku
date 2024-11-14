@@ -1,9 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import re
-import os
 import logging
-import emoji  # Required for Unicode emoji detection
 from emoji import is_emoji
 from db_server import (
     update_user_xp,
@@ -16,12 +14,6 @@ from db_server import (
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-# Load token from environment variable for security
-TOKEN = MTMwMzQyNjkzMzU4MDc2MzIzNg.Gfa6na.X21jZAdDaiNStwNJK3TId7qWWZrbuGdBlAKA7Q'
-if not TOKEN:
-    logger.error("Bot token not found. Set the DISCORD_BOT_TOKEN environment variable.")
-    exit(1)
 
 # Channel IDs (replace with actual IDs)
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
@@ -58,22 +50,14 @@ async def on_message(message):
 
     user_id = message.author.id
 
-    # Remove URLs
+    # Remove URLs and non-alphanumeric characters except spaces
     filtered_content = re.sub(URL_REGEX, "", message.content)
-
-    # Remove non-alphanumeric characters except spaces
     filtered_content = ''.join(c for c in filtered_content if c.isalnum() or c.isspace())
 
     # XP Calculation
     character_xp = len(filtered_content.replace(" ", "")) * 0.1
-
-    # Custom emojis
     custom_emoji_count = count_custom_emojis(message.content)
-
-    # Unicode emojis
     unicode_emoji_count = sum(1 for c in message.content if c in is_emoji)
-
-    # Total XP
     emoji_xp = (custom_emoji_count + unicode_emoji_count) * 0.5
     total_xp = character_xp + emoji_xp
 
@@ -113,6 +97,7 @@ async def create_leaderboard_embed(top_users):
             value=f"XP: {xp}",
             inline=False
         )
+
         # Only set thumbnail for the top user
         if rank == 1 and avatar_url:
             embed.set_thumbnail(url=avatar_url)
@@ -142,34 +127,13 @@ async def update_leaderboard():
         logger.error(f"Unexpected error in update_leaderboard: {e}")
 
 ROLE_NAMES = {
-    "🧔Homo Sapien": {
-        "message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!",
-        "has_perms": True
-    },
-    "🏆Homie": {
-        "message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!",
-        "has_perms": True
-    },
-    "🥉VETERAN": {
-        "message": "🎉 Congrats {member.mention}! You've become a **VETERAN** 🥉 member!",
-        "has_perms": False
-    },
-    "🥈ELITE": {
-        "message": "🎉 Congrats {member.mention}! You've become an **ELITE** 🥈 member!",
-        "has_perms": False
-    },
-    "🥇MYTHIC": {
-        "message": "🎉 Congrats {member.mention}! You've become a **MYTHIC** 🥇 member!",
-        "has_perms": False
-    },
-    "⭐VIP": {
-        "message": "🎉 Congrats {member.mention}! You've become a **VIP** ⭐ member!",
-        "has_perms": False
-    },
-    "✨LEGENDARY": {
-        "message": "🎉 Congrats {member.mention}! You've become a **LEGENDARY** ✨ member!",
-        "has_perms": False
-    },
+    "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
+    "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
+    "🥉VETERAN": {"message": "🎉 Congrats {member.mention}! You've become a **VETERAN** 🥉 member!", "has_perms": False},
+    "🥈ELITE": {"message": "🎉 Congrats {member.mention}! You've become an **ELITE** 🥈 member!", "has_perms": False},
+    "🥇MYTHIC": {"message": "🎉 Congrats {member.mention}! You've become a **MYTHIC** 🥇 member!", "has_perms": False},
+    "⭐VIP": {"message": "🎉 Congrats {member.mention}! You've become a **VIP** ⭐ member!", "has_perms": False},
+    "✨LEGENDARY": {"message": "🎉 Congrats {member.mention}! You've become a **LEGENDARY** ✨ member!", "has_perms": False},
 }
 
 @bot.event
@@ -186,4 +150,4 @@ async def announce_role_update(member, role_name):
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
         await channel.send(message)
 
-bot.run(TOKEN)
+bot.run("MTMwMzQyNjkzMzU4MDc2MzIzNg.GSHne3.vXMfND2Ua3qErwZI4JSaEfLTsN3fXSyTrfJPgk")  # Replace with your bot's token
