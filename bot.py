@@ -158,7 +158,7 @@ async def create_leaderboard_image(top_users):
     return img_binary  # Return the open BytesIO buffer (not closed)
 
 # Add the loop decorator to the function
-@tasks.loop(minutes=5)  # For example, run every 5 minutes
+@tasks.loop(seconds=20)  # For example, run every 5 minutes
 async def update_leaderboard():
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
@@ -177,11 +177,19 @@ async def update_leaderboard():
 
         if leaderboard_message is None:
             # Send the new leaderboard message if it doesn't exist yet
-            leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
+            leaderboard_message = await channel.send(
+                content="Here is the updated leaderboard!",
+                file=discord.File(image, filename="leaderboard.png")
+            )
         else:
-            # Edit the existing leaderboard message
-            await leaderboard_message.edit(content="Updated Leaderboard")  # Edit text content
-            await leaderboard_message.edit(file=discord.File(image, filename="leaderboard.png"))  # Edit the file (image)
+            # Delete the old leaderboard message and send a new one
+            await leaderboard_message.delete()
+
+            # Send the updated leaderboard
+            leaderboard_message = await channel.send(
+                content="Here is the updated leaderboard!",
+                file=discord.File(image, filename="leaderboard.png")
+            )
 
     except discord.HTTPException as e:
         if e.status == 429:
