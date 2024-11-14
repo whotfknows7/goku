@@ -116,17 +116,27 @@ async def create_leaderboard_embed(top_users):
 async def update_leaderboard():
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+
         if not channel:
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
+        # Fetch the leaderboard data
         top_users = fetch_top_users()
         embed = await create_leaderboard_embed(top_users)
 
+        # Get the last message sent in the channel
         messages = await channel.history(limit=1).flatten()
+
         if messages:
-            await messages[0].edit(embed=embed)
+            # Ensure the last message is authored by the bot
+            if messages[0].author == bot.user:
+                await messages[0].edit(embed=embed)  # Edit the bot's message
+            else:
+                # If the last message was not from the bot, send a new one
+                await channel.send(embed=embed)
         else:
+            # No previous message, send a new one
             await channel.send(embed=embed)
 
     except discord.HTTPException as e:
