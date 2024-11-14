@@ -14,7 +14,7 @@ from db_server import (
 )
 import asyncio
 import time
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
 from io import BytesIO
 
@@ -119,86 +119,75 @@ async def get_user_data(user_id):
     return None, None  # In case of error, return None
 
 async def create_leaderboard_image(top_users):
-    # Image size and padding
-    WIDTH, HEIGHT = 1000, 600
-    PADDING = 10
-    FONT_SIZE = 40  # Default font size (we'll scale this based on PFP size)
+    WIDTH, HEIGHT = 800, 1000
+    PADDING = 20
+    PFP_SIZE = 70
+    LINE_HEIGHT = 100
+    BACKGROUND_COLOR = (40, 40, 40)
+    TEXT_COLOR = (255, 255, 255)
+    DIVIDER_COLOR = (20, 20, 20)
+    RANK_COLORS = {1: (255, 215, 0), 2: (192, 192, 192), 3: (205, 127, 50)}  # Gold, Silver, Bronze
 
-    img = Image.new('RGB', (WIDTH, HEIGHT), color='white')
+    img = Image.new('RGB', (WIDTH, HEIGHT), color=BACKGROUND_COLOR)
     draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
 
-    # Load the font, make it large based on the PFP size
-    font = ImageFont.load_default()  # You can replace this with a custom font for better appearance
-
-    # Initial position for the leaderboard content
     y_position = PADDING
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
         nickname, avatar_url = await get_user_data(user_id)
-
-        # Fetch user profile picture (resize it for the image)
         response = requests.get(avatar_url)
-        img_pfp = Image.open(BytesIO(response.content))
+        img_pfp = Image.open(BytesIO(response.content)).resize((PFP_SIZE, PFP_SIZE))
+        img_pfp = ImageOps.fit(img_pfp, (PFP_SIZE, PFP_SIZE), method=0, centering=(0.5, 0.5))
 
-        img_pfp = img_pfp.resize((50, 50))  # Resize to 50x50 pixels (PFP size)
+        # Draw divider
+        draw.rectangle([0, y_position, WIDTH, y_position + LINE_HEIGHT], fill=DIVIDER_COLOR)
+        
+        # Paste profile picture
+        img.paste(img_pfp, (PADDING, y_position + (LINE_HEIGHT - PFP_SIZE) // 2))
 
-        # Draw the profile picture (left-aligned)
-        img.paste(img_pfp, (PADDING, y_position))
+        # Rank
+        rank_color = RANK_COLORS.get(rank, TEXT_COLOR)
+        rank_text = f"#{rank}"
+        draw.text((PADDING + PFP_SIZE + 20, y_position + 30), rank_text, font=font, fill=rank_color)
 
-        # Draw the rank, nickname, and points
-        draw.text((PADDING + 60, y_position), f"#{rank} {nickname}", font=font, fill="black")
-        draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
+        # Username and Level
+        user_text = f"{nickname} • LVL: {xp}"
+        draw.text((PADDING + PFP_SIZE + 100, y_position + 30), user_text, font=font, fill=TEXT_COLOR)
 
-        # Move to the next row
-        y_position += 60  # Adjust space between rows
+        y_position += LINE_HEIGHT
 
-    # Crop the image (e.g., we want a cropped version for the leaderboard size)
-    img_cropped = img.crop((0, 0, WIDTH, y_position))  # Crops the image based on content size
+    img_cropped = img.crop((0, 0, WIDTH, y_position + PADDING))
 
-    # Save the image in memory
     with BytesIO() as img_binary:
         img_cropped.save(img_binary, format='PNG')
-        img_binary.seek(0)  # Go to the start of the BytesIO buffer
-        return img_binary
-
-@tasks.loop(seconds=20)  # Run every 20 seconds
+        img_binary.seek(0)
+        return img_binaryks.loop(seconds=20)
 async def update_leaderboard():
+    global leaderboard_message  # Declare global to modify the message variable
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-
         if not channel:
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
-        # Fetch the leaderboard data
         top_users = fetch_top_users()
-
-        # Generate the leaderboard image
         image = await create_leaderboard_image(top_users)
 
-        global leaderboard_message  # Use global to access the message variable
-
         if leaderboard_message is None:
-            # If there's no leaderboard message yet, send a new one
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
-                file=discord.File(image, filename="leaderboard.png")
+                file=discord.File(fp=image, filename="leaderboard.png")
             )
         else:
-            # If the leaderboard message exists, delete it and send a new one
-            try:
-                await leaderboard_message.delete()
-            except discord.HTTPException as delete_error:
-                logger.error(f"Error deleting leaderboard message: {delete_error}")
-
+            await leaderboard_message.delete()
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
-                file=discord.File(image, filename="leaderboard.png")
+                file=discord.File(fp=image, filename="leaderboard.png")
             )
 
     except discord.HTTPException as e:
         if e.status == 429:
-            # Handle rate-limiting by waiting for the retry time
             retry_after = int(e.response.headers.get('X-RateLimit-Reset', time.time()))
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
@@ -207,7 +196,6 @@ async def update_leaderboard():
 
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
-
 
 # Role update handling
 ROLE_NAMES = {
