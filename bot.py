@@ -113,104 +113,80 @@ async def get_user_data(user_id):
 
     return None, None  # Return None if there's an error
 
-# Async function to create the leaderboard image
 async def create_leaderboard_image(top_users):
     WIDTH, HEIGHT = 1000, 600
-    PADDING = 20
-    PFP_SIZE = 80  # Match PFP size to the sample image
-    LINE_SPACING = 20
+    PADDING = 10
+    PFP_SIZE = 50  # Profile picture size
+    LINE_SPACING = 10
 
-    # Create a new image with white background
     img = Image.new('RGB', (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
-    # Load default font
+    # Use default font
     font = ImageFont.load_default()
 
     y_position = PADDING
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
-        # Get user nickname and avatar URL
         nickname, avatar_url = await get_user_data(user_id)
 
-        if not avatar_url:
-            logger.warning(f"No avatar found for user {nickname} (ID: {user_id})")
-            continue  # Skip if no avatar URL is found
-
-        # Fetch and resize the profile picture
+        # Fetch user profile picture
         response = requests.get(avatar_url)
         img_pfp = Image.open(BytesIO(response.content)).resize((PFP_SIZE, PFP_SIZE))
+
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Prepare the text sample (rank + nickname + points)
-        text_sample = f"#{rank} {nickname} - Points: {int(xp)}"
-        
-        # Calculate the text position
-        text_x = PADDING + PFP_SIZE + 10  # Text beside PFP
-        text_y = y_position + (PFP_SIZE - draw.textbbox((0, 0), text_sample, font=font)[3]) // 2
+        text_sample = f"#{rank} {nickname}"
+        text_bbox = draw.textbbox((0, 0), text_sample, font=font)
+        text_height = text_bbox[3] - text_bbox[1]
 
-        # Draw the text on the image
-        draw.text((text_x, text_y), text_sample, font=font, fill="black")
+        text_position_x = PADDING + PFP_SIZE + 10
+        draw.text((text_position_x, y_position), text_sample, font=font, fill="black")
+        draw.text((text_position_x + 150, y_position), f"Points: {int(xp)}", font=font, fill="black")
 
-        # Move the Y position down for the next user
-        y_position += PFP_SIZE + LINE_SPACING
+        y_position += max(PFP_SIZE, text_height) + LINE_SPACING
 
-    # Crop the image to fit the content
-    img_cropped = img.crop((0, 0, WIDTH, y_position + PADDING))
+    img_cropped = img.crop((0, 0, WIDTH, min(y_position + PADDING, HEIGHT)))
 
-    # Save the image to a binary stream
-    with BytesIO() as img_binary:
-        img_cropped.save(img_binary, format='PNG')
-        img_binary.seek(0)  # Reset buffer to the beginning
-        return img_binary
-        image = await create_leaderboard_image(top_users)
-        print("Image created successfully!")  # Debug line
-        image = await create_leaderboard_image(top_users)
-        logger.info("Generated leaderboard image")
-       
+    img_binary = BytesIO()
+    img_cropped.save(img_binary, format='PNG')
+    img_binary.seek(0)  # Reset buffer pointer
+    return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     global leaderboard_message  # Declare global to modify the message variable
-
     try:
-        # Fetch the channel where leaderboard should be sent
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-
         if not channel:
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
-        # Fetch the top users
         top_users = fetch_top_users()
-
-        # Generate the leaderboard image
         image = await create_leaderboard_image(top_users)
-        print("Image created successfully!")  # Debug line to ensure image creation
 
-        # Sending or updating the leaderboard message
         if leaderboard_message is None:
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
-            print("Image sent to channel")  # Debug line to confirm the message was sent
         else:
-            await leaderboard_message.delete()  # Delete the previous message
+            await leaderboard_message.delete()
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
-            print("Image updated and sent to channel")  # Debug line to confirm update
 
-    except Exception as e:
-        # Catch any exception during the process and log it
-        print(f"Error sending image: {e}")
-        if isinstance(e, discord.HTTPException) and e.status == 429:
+    except discord.HTTPException as e:
+        if e.status == 429:
             retry_after = int(e.response.headers.get('X-RateLimit-Reset', time.time()))
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
         else:
             logger.error(f"HTTPException while updating leaderboard: {e}")
+
+    except Exception as e:
+        logger.error(f"Unexpected error in update_leaderboard: {e}")
 
 # Role update handling
 ROLE_NAMES = {
