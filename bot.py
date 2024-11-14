@@ -88,18 +88,19 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
 
-# Async function to get user data with rate-limiting handling
 async def get_user_data(user_id):
     retry_after = 0
+
     while retry_after == 0:
         try:
             user = await bot.fetch_user(user_id)
-            display_name = user.display_name
-            avatar_url = user.avatar_url if user.avatar else None
+            # Use nickname if available, else fallback to username
+            display_name = user.nick if user.nick else user.name
+            avatar_url = user.avatar.url if user.avatar else user.default_avatar.url
             return display_name, avatar_url
+
         except discord.HTTPException as e:
-            if e.status == 429:
-                # If rate-limited, get the retry time
+            if e.status == 429:  # Rate-limited
                 retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
                 wait_time = retry_after - time.time()
                 if wait_time > 0:
@@ -107,43 +108,58 @@ async def get_user_data(user_id):
                     await asyncio.sleep(wait_time)
             else:
                 raise e
-    return None, None  # In case of error, return None
 
+    return None, None  # Return None if there's an error
+
+# Async function to create the leaderboard image
 async def create_leaderboard_image(top_users):
     WIDTH, HEIGHT = 1000, 600
     PADDING = 20
     PFP_SIZE = 80  # Match PFP size to the sample image
     LINE_SPACING = 20
 
+    # Create a new image with white background
     img = Image.new('RGB', (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
+
+    # Load default font
     font = ImageFont.load_default()
 
     y_position = PADDING
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
+        # Get user nickname and avatar URL
         nickname, avatar_url = await get_user_data(user_id)
 
-        # Fetch and resize PFP
+        if not avatar_url:
+            logger.warning(f"No avatar found for user {nickname} (ID: {user_id})")
+            continue  # Skip if no avatar URL is found
+
+        # Fetch and resize the profile picture
         response = requests.get(avatar_url)
         img_pfp = Image.open(BytesIO(response.content)).resize((PFP_SIZE, PFP_SIZE))
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Text formatting
+        # Prepare the text sample (rank + nickname + points)
         text_sample = f"#{rank} {nickname} - Points: {int(xp)}"
+        
+        # Calculate the text position
         text_x = PADDING + PFP_SIZE + 10  # Text beside PFP
         text_y = y_position + (PFP_SIZE - draw.textbbox((0, 0), text_sample, font=font)[3]) // 2
 
+        # Draw the text on the image
         draw.text((text_x, text_y), text_sample, font=font, fill="black")
 
-        # Move to next row
+        # Move the Y position down for the next user
         y_position += PFP_SIZE + LINE_SPACING
 
+    # Crop the image to fit the content
     img_cropped = img.crop((0, 0, WIDTH, y_position + PADDING))
 
+    # Save the image to a binary stream
     with BytesIO() as img_binary:
         img_cropped.save(img_binary, format='PNG')
-        img_binary.seek(0)
+        img_binary.seek(0)  # Reset buffer to the beginning
         return img_binary
 @tasks.loop(seconds=20)
 async def update_leaderboard():
