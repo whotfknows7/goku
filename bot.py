@@ -2,9 +2,9 @@ import discord
 from discord.ext import commands, tasks
 import re
 import logging
-from emoji import is_emoji
 import rollbar
 import rollbar.contrib.flask
+from emoji import is_emoji
 from db_server import (
     update_user_xp,
     track_activity,
@@ -12,18 +12,20 @@ from db_server import (
     update_boost_cooldown,
     check_activity_burst
 )
-import rollbar
 
+# Rollbar initialization
 rollbar.init(
-  access_token='cfd2554cc40741fca49e3d8d6502f039',
-  environment='testenv',
-  code_version='1.0'
+    access_token='cfd2554cc40741fca49e3d8d6502f039',
+    environment='testenv',
+    code_version='1.0'
 )
 rollbar.report_message('Rollbar is configured correctly', 'info')
+
+# Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Channel IDs (replace with actual IDs)
+# Channel IDs
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
 LEADERBOARD_CHANNEL_ID = 1301183910838796460
 
@@ -34,7 +36,7 @@ intents.members = True
 # Bot setup
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Constants for XP boost and activity burst
+# Constants
 BOOST_DURATION = 300  # 5 minutes in seconds
 BOOST_COOLDOWN = 300  # 5 minutes in seconds
 MESSAGE_LIMIT = 10
@@ -46,11 +48,19 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 # Placeholder for the leaderboard message
 leaderboard_message = None
 
+# Function to count custom emojis in a message
+def count_custom_emojis(content):
+    # Regex to match custom emojis in the form of <:name:id>
+    custom_emoji_pattern = r'<a?:\w+:\d+>'
+    return len(re.findall(custom_emoji_pattern, content))
+
+# Bot event when ready
 @bot.event
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
     update_leaderboard.start()
 
+# Bot event for incoming messages
 @bot.event
 async def on_message(message):
     if message.author.bot:
@@ -65,7 +75,7 @@ async def on_message(message):
     # XP Calculation
     character_xp = len(filtered_content.replace(" ", "")) * 0.1
     custom_emoji_count = count_custom_emojis(message.content)
-    unicode_emoji_count = sum(1 for c in message.content if c in is_emoji)
+    unicode_emoji_count = sum(1 for c in message.content if is_emoji(c))
     emoji_xp = (custom_emoji_count + unicode_emoji_count) * 0.5
     total_xp = character_xp + emoji_xp
 
@@ -78,6 +88,7 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
+# Fetch top users for leaderboard
 def fetch_top_users():
     # Fetch top users from database (adjust for your DB implementation)
     from db_server import cursor
@@ -87,9 +98,10 @@ def fetch_top_users():
 async def get_user_data(user_id):
     user = await bot.fetch_user(user_id)
     display_name = user.display_name
-    avatar_url = user.avatar_url  # Use avatar_url for older versions of discord.py
+    avatar_url = user.avatar_url if user.avatar else None  # Use avatar_url, fall back to None if no avatar
     return display_name, avatar_url
 
+# Create leaderboard embed
 async def create_leaderboard_embed(top_users):
     embed = discord.Embed(
         title="🏆 Daily Leaderboard",
@@ -112,6 +124,7 @@ async def create_leaderboard_embed(top_users):
 
     return embed
 
+# Task to update the leaderboard
 @tasks.loop(seconds=15)
 async def update_leaderboard():
     try:
@@ -143,7 +156,9 @@ async def update_leaderboard():
         logger.error(f"HTTPException while updating leaderboard: {e}")
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
+        rollbar.report_exc_info()  # Report the exception to Rollbar
 
+# Role update handling
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
@@ -154,6 +169,7 @@ ROLE_NAMES = {
     "✨LEGENDARY": {"message": "🎉 Congrats {member.mention}! You've become a **LEGENDARY** ✨ member!", "has_perms": False},
 }
 
+# Event when member's roles update
 @bot.event
 async def on_member_update(before, after):
     if before.roles != after.roles:
@@ -161,6 +177,7 @@ async def on_member_update(before, after):
             if role.name in ROLE_NAMES and role.name not in [r.name for r in before.roles]:
                 await announce_role_update(after, role.name)
 
+# Announce role update
 async def announce_role_update(member, role_name):
     role_info = ROLE_NAMES.get(role_name)
     if role_info:
@@ -168,4 +185,5 @@ async def announce_role_update(member, role_name):
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
         await channel.send(message)
 
-bot.run("MTMwMzQyNjkzMzU4MDc2MzIzNg.GSHne3.vXMfND2Ua3qErwZI4JSaEfLTsN3fXSyTrfJPgk")  # Replace with your bot's token
+# Run bot with token
+bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GSHne3.vXMfND2Ua3qErwZI4JSaEfLTsN3fXSyTrfJPgk')  # Replace with your bot's token
