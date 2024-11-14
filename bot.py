@@ -62,7 +62,7 @@ def count_custom_emojis(content):
 @bot.event
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
-    update_leaderboard.start()
+    update_leaderboard.start()  # This will start the loop
 
 # Bot event for incoming messages
 @bot.event
@@ -118,7 +118,6 @@ async def get_user_data(user_id):
                 raise e
     return None, None  # In case of error, return None
 
-# Create leaderboard image
 async def create_leaderboard_image(top_users):
     # Image size and padding
     WIDTH, HEIGHT = 1000, 600
@@ -152,14 +151,14 @@ async def create_leaderboard_image(top_users):
         y_position += 60  # Adjust space between rows
 
     # Save the image in memory
-    img.save("leaderboard.png")
+    img_binary = BytesIO()  # Create an open BytesIO buffer
+    img.save(img_binary, format='PNG')
+    img_binary.seek(0)  # Go to the start of the BytesIO buffer
 
-    return "leaderboard.png"
-# Variable to store the previous leaderboard message
-leaderboard_message = None
+    return img_binary  # Return the open BytesIO buffer (not closed)
 
-# Task to update the leaderboard
-@tasks.loop(seconds=20)
+# Add the loop decorator to the function
+@tasks.loop(minutes=5)  # For example, run every 5 minutes
 async def update_leaderboard():
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
@@ -171,21 +170,21 @@ async def update_leaderboard():
         top_users = fetch_top_users()
 
         # Generate the leaderboard image
-        image_path = await create_leaderboard_image(top_users)
+        image = await create_leaderboard_image(top_users)
 
         # Check if the leaderboard message already exists
         global leaderboard_message
+
         if leaderboard_message is None:
             # Send the new leaderboard message if it doesn't exist yet
-            leaderboard_message = await channel.send(file=discord.File(image_path))
+            leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
         else:
             # Edit the existing leaderboard message
             await leaderboard_message.edit(content="Updated Leaderboard")  # Edit text content
-            await leaderboard_message.edit(file=discord.File(image_path))  # Edit the file (image)
+            await leaderboard_message.edit(file=discord.File(image, filename="leaderboard.png"))  # Edit the file (image)
 
     except discord.HTTPException as e:
         if e.status == 429:
-            # Get the Retry-After header value (time in seconds)
             retry_after = int(e.retry_after)
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
