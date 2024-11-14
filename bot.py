@@ -77,7 +77,7 @@ async def on_message(message):
     custom_emoji_count = count_custom_emojis(message.content)
     unicode_emoji_count = sum(1 for c in message.content if is_emoji(c))
     emoji_xp = (custom_emoji_count + unicode_emoji_count) * 0.5
-   total_xp = character_xp + emoji_xp # Rounds to nearest whole number
+    total_xp = character_xp + emoji_xp 
 
     # Update user data
     update_user_xp(user_id, total_xp)
@@ -128,7 +128,7 @@ async def create_leaderboard_embed(top_users):
         nickname, avatar_url = await get_user_data(user_id)
         embed.add_field(
             name=f"#{rank} {nickname}",
-            value=f"XP: {xp}",
+            value=f"XP: {round(xp)}",
             inline=False
         )
 
