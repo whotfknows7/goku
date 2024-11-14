@@ -77,7 +77,7 @@ async def on_message(message):
     custom_emoji_count = count_custom_emojis(message.content)
     unicode_emoji_count = sum(1 for c in message.content if is_emoji(c))
     emoji_xp = (custom_emoji_count + unicode_emoji_count) * 0.5
-    total_xp = character_xp + emoji_xp
+   total_xp = character_xp + emoji_xp # Rounds to nearest whole number
 
     # Update user data
     update_user_xp(user_id, total_xp)
@@ -139,7 +139,7 @@ async def create_leaderboard_embed(top_users):
     return embed
 
 # Task to update the leaderboard
-@tasks.loop(seconds=15)
+@tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
@@ -162,17 +162,18 @@ async def update_leaderboard():
                 # If the last message was not from the bot, send a new one
                 await channel.send(embed=embed)
         else:
-            # No previous message, send a new one
             await channel.send(embed=embed)
 
     except discord.HTTPException as e:
         if e.status == 429:
-            logger.warning(f"Rate-limited while updating leaderboard. Retrying...")
-        logger.error(f"HTTPException while updating leaderboard: {e}")
+            # Get the Retry-After header value (time in seconds)
+            retry_after = int(e.retry_after)
+            logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
+            await asyncio.sleep(retry_after)
+        else:
+            logger.error(f"HTTPException while updating leaderboard: {e}")
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
-        rollbar.report_exc_info()  # Report the exception to Rollbar
-
 # Role update handling
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
