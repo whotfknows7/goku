@@ -20,7 +20,6 @@ rollbar.init(
   code_version='1.0'
 )
 rollbar.report_message('Rollbar is configured correctly', 'info')
-# Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
