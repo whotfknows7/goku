@@ -108,12 +108,10 @@ async def get_user_data(user_id):
                     await asyncio.sleep(wait_time)
             else:
                 raise e
+            if not avatar_url: logger.warning(f"Could not fetch avatar for user (ID: {user_id})")
+            if not display_name: logger.warning(f"Could not fetch nickname for user (ID: {user_id})")
 
     return None, None  # Return None if there's an error
-    if not avatar_url:
-    logger.warning(f"Could not fetch avatar for user (ID: {user_id})")
-    if not display_name:
-    logger.warning(f"Could not fetch nickname for user (ID: {user_id})")
 
 # Async function to create the leaderboard image
 async def create_leaderboard_image(top_users):
