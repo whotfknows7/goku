@@ -87,7 +87,7 @@ def fetch_top_users():
 async def get_user_data(user_id):
     user = await bot.fetch_user(user_id)
     display_name = user.display_name
-    avatar_url = user.display_avatar.url  # Modern approach
+    avatar_url = user.avatar_url  # Use avatar_url for older versions of discord.py
     return display_name, avatar_url
 
 async def create_leaderboard_embed(top_users):
