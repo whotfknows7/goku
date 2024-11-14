@@ -163,24 +163,34 @@ async def create_leaderboard_image(top_users):
         img_cropped.save(img_binary, format='PNG')
         img_binary.seek(0)
         return img_binaryks.loop(seconds=20)
+@tasks.loop(seconds=20)  # Runs the task every 20 seconds
 async def update_leaderboard():
     global leaderboard_message  # Declare global to modify the message variable
+    image = None  # Initialize 'image' to avoid UnboundLocalError
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
         if not channel:
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
+        # Fetch leaderboard data
         top_users = fetch_top_users()
+
+        # Generate leaderboard image
         image = await create_leaderboard_image(top_users)
 
+        # Send or update leaderboard message
         if leaderboard_message is None:
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
         else:
-            await leaderboard_message.delete()
+            try:
+                await leaderboard_message.delete()
+            except discord.HTTPException as delete_error:
+                logger.error(f"Error deleting leaderboard message: {delete_error}")
+
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
                 file=discord.File(fp=image, filename="leaderboard.png")
@@ -188,7 +198,7 @@ async def update_leaderboard():
 
     except discord.HTTPException as e:
         if e.status == 429:
-            retry_after = int(e.response.headers.get('X-RateLimit-Reset', time.time()))
+            retry_after = int(e.response.headers.get('Retry-After', 5))  # Default to 5 seconds if not provided
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
         else:
@@ -197,6 +207,15 @@ async def update_leaderboard():
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
 
+    finally:
+        if image:
+            image.close()  # Ensure image buffer is closed to prevent resource leaks
+
+# This will start the task when the bot is ready
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user}')
+    update_leaderboard.start()  # Start the task loop
 # Role update handling
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
