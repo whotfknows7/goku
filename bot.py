@@ -3,6 +3,8 @@ from discord.ext import commands, tasks
 import re
 import logging
 from emoji import is_emoji
+import rollbar
+import rollbar.contrib.flask
 from db_server import (
     update_user_xp,
     track_activity,
@@ -10,7 +12,14 @@ from db_server import (
     update_boost_cooldown,
     check_activity_burst
 )
+import rollbar
 
+rollbar.init(
+  access_token='cfd2554cc40741fca49e3d8d6502f039',
+  environment='testenv',
+  code_version='1.0'
+)
+rollbar.report_message('Rollbar is configured correctly', 'info')
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
