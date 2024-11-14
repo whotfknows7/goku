@@ -197,7 +197,6 @@ def fetch_top_users():
 
 
 # Async function to get user data with rate-limiting handling
-
 async def get_user_data(user_id):
 
     retry_after = 0
