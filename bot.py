@@ -145,9 +145,6 @@ async def create_leaderboard_image(top_users):
         # Draw the profile picture (left-aligned)
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Set the font size based on PFP size
-        font = ImageFont.truetype("/path/to/font.ttf", 50)  # Increase font size dynamically (50px for example)
-
         # Draw the rank, nickname, and points
         draw.text((PADDING + 60, y_position), f"#{rank} {nickname}", font=font, fill="black")
         draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
