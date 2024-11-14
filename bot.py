@@ -161,6 +161,9 @@ async def create_leaderboard_image(top_users):
         img_cropped.save(img_binary, format='PNG')
         img_binary.seek(0)  # Reset buffer to the beginning
         return img_binary
+        image = await create_leaderboard_image(top_users)
+        logger.info("Generated leaderboard image")
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     global leaderboard_message  # Declare global to modify the message variable
@@ -192,9 +195,6 @@ async def update_leaderboard():
             await asyncio.sleep(retry_after)
         else:
             logger.error(f"HTTPException while updating leaderboard: {e}")
-
-    except Exception as e:
-        logger.error(f"Unexpected error in update_leaderboard: {e}")
 
 # Role update handling
 ROLE_NAMES = {
