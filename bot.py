@@ -208,11 +208,11 @@ async def get_user_data(user_id):
 
             user = await bot.fetch_user(user_id)
 
-            display_name = user.display_name
+            nickname = user.display_name
 
             avatar_url = user.avatar_url if user.avatar else None
 
-            return display_name, avatar_url
+            return nickname, avatar_url
 
         except discord.HTTPException as e:
 
@@ -254,6 +254,10 @@ async def create_leaderboard_image(top_users):
     for rank, (user_id, xp) in enumerate(top_users, 1):
         nickname, avatar_url = await get_user_data(user_id)
 
+        # If no nickname found, fallback to using 'Unknown User'
+        if not nickname:
+            nickname = "Unknown User"
+
         # Fetch user profile picture (resize it for the image)
         try:
             response = requests.get(avatar_url)
@@ -266,7 +270,7 @@ async def create_leaderboard_image(top_users):
         # Draw the profile picture (left-aligned)
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Draw the rank, nickname, and points
+        # Draw the rank, nickname, and points (using nickname here)
         draw.text((PADDING + 60, y_position), f"#{rank} {nickname}", font=font, fill="black")
         draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
 
@@ -279,6 +283,7 @@ async def create_leaderboard_image(top_users):
     img_binary.seek(0)  # Go to the start of the BytesIO buffer
 
     return img_binary  # Return the open BytesIO buffer (not closed)
+
 @tasks.loop(seconds=20)  # Run every 20 seconds
 async def update_leaderboard():
     try:
