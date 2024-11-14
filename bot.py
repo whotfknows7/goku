@@ -26,9 +26,8 @@ rollbar.init(
 )
 rollbar.report_message('Rollbar is configured correctly', 'info')
 
-# Logging setup
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
+# Add logger configuration to handle UTF-8 properly
+logging.basicConfig(level=logging.DEBUG, encoding='utf-8')  # Ensure UTF-8 encoding in logs
 
 # Channel IDs
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
@@ -163,10 +162,14 @@ async def create_leaderboard_image(top_users):
         img_cropped.save(img_binary, format='PNG')
         img_binary.seek(0)
         return img_binaryks.loop(seconds=20)
+
 @tasks.loop(seconds=20)  # Runs the task every 20 seconds
+# Task to periodically update the leaderboard
 async def update_leaderboard():
-    global leaderboard_message  # Declare global to modify the message variable
+    global leaderboard_message
+
     image = None  # Initialize 'image' to avoid UnboundLocalError
+
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
         if not channel:
@@ -179,10 +182,14 @@ async def update_leaderboard():
         # Generate leaderboard image
         image = await create_leaderboard_image(top_users)
 
+        # Ensure that the text being sent is UTF-8 encoded
+        content = "Here is the updated leaderboard!"
+        content = content.encode('utf-8').decode('utf-8')  # Ensure the string is UTF-8 encoded
+
         # Send or update leaderboard message
         if leaderboard_message is None:
             leaderboard_message = await channel.send(
-                content="Here is the updated leaderboard!",
+                content=content,
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
         else:
@@ -192,7 +199,7 @@ async def update_leaderboard():
                 logger.error(f"Error deleting leaderboard message: {delete_error}")
 
             leaderboard_message = await channel.send(
-                content="Here is the updated leaderboard!",
+                content=content,
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
 
@@ -209,7 +216,13 @@ async def update_leaderboard():
 
     finally:
         if image:
-            image.close()  # Ensure image buffer is closed to prevent resource leaks
+            image.close()  # Ensure image buffer is closed
+
+# Starting the task when bot is ready
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user}')
+    update_leaderboard.start()  # Start the task loop
 
 # This will start the task when the bot is ready
 @bot.event
