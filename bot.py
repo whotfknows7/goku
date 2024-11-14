@@ -293,7 +293,34 @@ async def update_leaderboard():
             return
 
         # Fetch the leaderboard data
-        top_users = fetch_top_users
+        top_users = fetch_top_users()
+
+        # Generate the leaderboard image
+        image = await create_leaderboard_image(top_users)
+
+        # Ensure image is passed as a file, not trying to log or serialize the object
+        global leaderboard_message
+
+        if leaderboard_message:
+            # Delete the previous message if it exists
+            await leaderboard_message.delete()
+
+        # Send the new leaderboard message from scratch
+        leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
+
+    except discord.HTTPException as e:
+        if e.status == 429:
+            retry_after = int(e.retry_after)
+            logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
+            await asyncio.sleep(retry_after)
+        else:
+            logger.error(f"HTTPException while updating leaderboard: {e}")
+
+    except Exception as e:
+        logger.error(f"Unexpected error in update_leaderboard: {e}")
+
+# Role update handling
+
 ROLE_NAMES = {
 
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
