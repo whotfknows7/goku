@@ -105,7 +105,8 @@ async def get_user_data(user_id):
             return display_name, avatar_url
         except discord.HTTPException as e:
             if e.status == 429:
-                retry_after = int(e.response.headers.get('X-RateLimit-Reset'))
+                # If rate limited, get the retry time
+                retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
                 wait_time = retry_after - time.time()
                 if wait_time > 0:
                     logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
