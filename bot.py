@@ -12,6 +12,8 @@ from db_server import (
     update_boost_cooldown,
     check_activity_burst
 )
+import asyncio
+import time
 
 # Rollbar initialization
 rollbar.init(
@@ -27,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Channel IDs
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
-LEADERBOARD_CHANNEL_ID = 1301183910838796460
+LEADERBOARD_CHANNEL_ID = 1303672077068537916
 
 # Define intents
 intents = discord.Intents.default()
@@ -50,7 +52,6 @@ leaderboard_message = None
 
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
-    # Regex to match custom emojis in the form of <:name:id>
     custom_emoji_pattern = r'<a?:\w+:\d+>'
     return len(re.findall(custom_emoji_pattern, content))
 
@@ -67,7 +68,6 @@ async def on_message(message):
         return
 
     user_id = message.author.id
-
     # Remove URLs and non-alphanumeric characters except spaces
     filtered_content = re.sub(URL_REGEX, "", message.content)
     filtered_content = ''.join(c for c in filtered_content if c.isalnum() or c.isspace())
@@ -90,16 +90,29 @@ async def on_message(message):
 
 # Fetch top users for leaderboard
 def fetch_top_users():
-    # Fetch top users from database (adjust for your DB implementation)
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
 
+# Async function to get user data with rate-limiting handling
 async def get_user_data(user_id):
-    user = await bot.fetch_user(user_id)
-    display_name = user.display_name
-    avatar_url = user.avatar_url if user.avatar else None  # Use avatar_url, fall back to None if no avatar
-    return display_name, avatar_url
+    retry_after = 0
+    while retry_after == 0:
+        try:
+            user = await bot.fetch_user(user_id)
+            display_name = user.display_name
+            avatar_url = user.avatar_url if user.avatar else None
+            return display_name, avatar_url
+        except discord.HTTPException as e:
+            if e.status == 429:
+                retry_after = int(e.response.headers.get('X-RateLimit-Reset'))
+                wait_time = retry_after - time.time()
+                if wait_time > 0:
+                    logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
+                    await asyncio.sleep(wait_time)
+            else:
+                raise e
+    return None, None  # In case of error, return None
 
 # Create leaderboard embed
 async def create_leaderboard_embed(top_users):
@@ -129,7 +142,6 @@ async def create_leaderboard_embed(top_users):
 async def update_leaderboard():
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-
         if not channel:
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
@@ -153,6 +165,8 @@ async def update_leaderboard():
             await channel.send(embed=embed)
 
     except discord.HTTPException as e:
+        if e.status == 429:
+            logger.warning(f"Rate-limited while updating leaderboard. Retrying...")
         logger.error(f"HTTPException while updating leaderboard: {e}")
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
