@@ -164,34 +164,48 @@ async def create_leaderboard_image(top_users):
         img_binary.seek(0)  # Reset buffer to the beginning
         return img_binary
         image = await create_leaderboard_image(top_users)
+        print("Image created successfully!")  # Debug line
+        image = await create_leaderboard_image(top_users)
         logger.info("Generated leaderboard image")
-
+       
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     global leaderboard_message  # Declare global to modify the message variable
+
     try:
+        # Fetch the channel where leaderboard should be sent
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+
         if not channel:
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
+        # Fetch the top users
         top_users = fetch_top_users()
-        image = await create_leaderboard_image(top_users)
 
+        # Generate the leaderboard image
+        image = await create_leaderboard_image(top_users)
+        print("Image created successfully!")  # Debug line to ensure image creation
+
+        # Sending or updating the leaderboard message
         if leaderboard_message is None:
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
+            print("Image sent to channel")  # Debug line to confirm the message was sent
         else:
-            await leaderboard_message.delete()
+            await leaderboard_message.delete()  # Delete the previous message
             leaderboard_message = await channel.send(
                 content="Here is the updated leaderboard!",
                 file=discord.File(fp=image, filename="leaderboard.png")
             )
+            print("Image updated and sent to channel")  # Debug line to confirm update
 
-    except discord.HTTPException as e:
-        if e.status == 429:
+    except Exception as e:
+        # Catch any exception during the process and log it
+        print(f"Error sending image: {e}")
+        if isinstance(e, discord.HTTPException) and e.status == 429:
             retry_after = int(e.response.headers.get('X-RateLimit-Reset', time.time()))
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
