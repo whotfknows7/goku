@@ -209,7 +209,7 @@ async def get_member(user_id):
             # Fetch the member from the guild
             member = await bot.guild.fetch_member(user_id)
             # Get member nickname
-            nickname = member.nick if member.nick else member.display_name
+            nickname = member.nick if member.nick else member.username
             avatar_url = member.avatar_url if member.avatar_url else none
             return nickname, avatar_url
         
