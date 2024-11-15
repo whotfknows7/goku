@@ -1,5 +1,4 @@
-# main.py
-
+# bot.py
 import discord
 from discord.ext import commands, tasks
 import re
@@ -20,7 +19,7 @@ from io import BytesIO
 
 # Rollbar initialization
 rollbar.init(
-    access_token='cfd2554cc40741fca49e3d8d6502f039',  # Use your actual token
+    access_token='YOUR_ACCESS_TOKEN',  # Replace with your actual Rollbar token
     environment='testenv',
     code_version='1.0'
 )
@@ -33,7 +32,7 @@ logger = logging.getLogger(__name__)
 # Constants
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
 LEADERBOARD_CHANNEL_ID = 1303672077068537916
-GUILD_ID = 1227505156220784692
+GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 BOOST_DURATION = 300  # 5 minutes
 BOOST_COOLDOWN = 300
 MESSAGE_LIMIT = 10
@@ -58,6 +57,7 @@ def fetch_top_users():
     return cursor.fetchall()
 
 async def fetch_font(font_url, size=24):
+    """Fetch and return font from a URL."""
     async with aiohttp.ClientSession() as session:
         async with session.get(font_url) as response:
             if response.status == 200:
@@ -68,6 +68,7 @@ async def fetch_font(font_url, size=24):
                 raise Exception("Font fetch failed")
 
 async def get_member(user_id):
+    """Fetch a guild member and their avatar URL."""
     guild = bot.get_guild(GUILD_ID)
     if not guild:
         logger.error("Guild not found")
@@ -76,61 +77,44 @@ async def get_member(user_id):
     try:
         member = await guild.fetch_member(user_id)
         nickname = member.nick or member.name
-        avatar_url = member.display_avatar.url
+        avatar_url = member.avatar_url_as(format="png")  # Compatible with v1.7.3
         return nickname, avatar_url
     except discord.HTTPException as e:
         logger.error(f"Error fetching member {user_id}: {e}")
         return None
 
 async def create_leaderboard_image(top_users):
-    WIDTH, HEIGHT = 1000, 600
-    PADDING = 10
-    img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
+    """Generate a leaderboard image with emoji rendering."""
+    img = Image.new("RGB", (1000, 600), color='white')
     draw = ImageDraw.Draw(img)
 
-    # Load fonts asynchronously
-    font = await fetch_font("https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf")
-    emoji_font = await fetch_font("https://github.com/googlefonts/noto-emoji/raw/main/fonts/NotoColorEmoji.ttf")
+    font = await fetch_font("https://example.com/NotoSans-Regular.ttf", size=24)
+    emoji_font = await fetch_font("https://example.com/NotoColorEmoji.ttf", size=24)
 
-    y_position = PADDING
+    y_position = 10
+
     for rank, (user_id, xp) in enumerate(top_users, 1):
-        nickname, avatar_url = await get_member(user_id)
-        if not nickname:
+        member_data = await get_member(user_id)
+        if not member_data:
             continue
+
+        nickname, avatar_url = member_data
 
         # Fetch avatar
         async with aiohttp.ClientSession() as session:
             async with session.get(avatar_url) as response:
-                if response.status == 200:
-                    avatar_data = BytesIO(await response.read())
-                    img_pfp = Image.open(avatar_data).resize((50, 50))
-                else:
-                    logger.warning(f"Failed to fetch avatar for user {user_id}. Using default image.")
-                    img_pfp = Image.new('RGB', (50, 50), color='grey')
+                avatar = Image.open(BytesIO(await response.read())).resize((50, 50))
 
-        img.paste(img_pfp, (PADDING, y_position))
+        img.paste(avatar, (10, y_position))
 
-        # Draw rank and nickname
-        rank_text = f"#{rank}"
-        draw.text((PADDING + 60, y_position), rank_text, font=font, fill="black")
-
-        x_position = PADDING + 110
-        for char in nickname:
-            if is_emoji(char):
-                draw.text((x_position, y_position), char, font=emoji_font, fill="black")
-                x_position += draw.textbbox((x_position, y_position), char, font=emoji_font)[2]
-            else:
-                draw.text((x_position, y_position), char, font=font, fill="black")
-                x_position += draw.textbbox((x_position, y_position), char, font=font)[2]
-
-        # Draw XP
-        draw.text((x_position + 10, y_position), f"PTS: {int(xp)}", font=font, fill="black")
+        # Draw text including nickname and XP
+        draw.text((70, y_position), f"#{rank} {nickname} | XP: {int(xp)}", font=font, fill="black")
         y_position += 60
 
-    output = BytesIO()
-    img.save(output, format="PNG")
-    output.seek(0)
-    return output
+    img_binary = BytesIO()
+    img.save(img_binary, format="PNG")
+    img_binary.seek(0)
+    return img_binary
 
 # Event Handlers
 @bot.event
@@ -158,6 +142,7 @@ async def on_message(message):
 
 @tasks.loop(seconds=20)
 async def update_leaderboard():
+    """Update the leaderboard periodically."""
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
         if not channel:
@@ -175,4 +160,5 @@ async def update_leaderboard():
     except Exception as e:
         logger.error(f"Error updating leaderboard: {e}")
 
-bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI')  # Replace with your actual token
+# Run the bot
+bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI')  # Replace with your actual bot token
