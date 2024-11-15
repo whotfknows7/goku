@@ -194,16 +194,14 @@ def fetch_top_users():
 
     return cursor.fetchall()
 
-async def get_user_data(guildID, user_id):
-   if (!userID) return;
-   let guild = guildID;
+async def get_user_data(user_id):
     retry_after = 0
     while retry_after == 0:
         try:
-            user = await bot.fetch_user(user_id)
-            nickname = user.display_name
-            avatar_url = user.avatar_url if user.avatar else None
-            return nickname, avatar_url
+            user = await bot.fetch_user(user_id)  # Fetching the user object using their ID
+            display_name = user.display_name  # Use display_name instead of nick
+            avatar_url = user.avatar_url if user.avatar else None  # Get avatar URL
+            return display_name, avatar_url  # Return display name (not nickname) and avatar URL
         except discord.HTTPException as e:
             if e.status == 429:  # Rate-limited
                 retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
@@ -215,31 +213,6 @@ async def get_user_data(guildID, user_id):
                     raise
             else:
                 return None, None  # In case of error, return None
-async getMember(guildID, userID, cache = true) {
-    if (!userID) return;
-    let guild = guildID;
-    if (typeof guildID == 'string') guild = await this.getGuild(guildID, cache);
-    if (!guild) return;
-    userID = userID.match(/[0-9]+/);
-    if (!userID) return;
-    userID = userID[0];
-    let member = guild.members.get(userID);
-    if (member) {
-        member.status = member.user.presence?.status;
-    } else {
-        try {
-            member = await guild.getRESTMember(userID);
-        } catch (e) {
-            return;
-        }
-        if (!member.id) member.id = member.user.id;
-        if (!member.status) member.status = member.user.presence?.status;
-        if (member && cache) {
-            guild.members.add(member, guild, false);
-        }
-    }
-    return member;
-}
 
 async def create_leaderboard_image(top_users):
     # Image size and padding
@@ -258,11 +231,11 @@ async def create_leaderboard_image(top_users):
 
     # Loop through the top users to add their info to the image
     for rank, (user_id, xp) in enumerate(top_users, 1):
-        nickname, avatar_url = await get_user_data(user_id)
+        display_name, avatar_url = await get_user_data(user_id)  # Use display name here
         
-        # Fallback to using "Unknown User" if no nickname found
-        if not nickname:
-            nickname = "Unknown User"
+        # Fallback to using "Unknown User" if no display name is found
+        if not display_name:
+            display_name = "Unknown User"
 
         # Fetch user profile picture and resize it for the image
         try:
@@ -276,8 +249,8 @@ async def create_leaderboard_image(top_users):
         # Draw the profile picture (left-aligned)
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Draw the rank, nickname, and points
-        draw.text((PADDING + 60, y_position), f"{rank}. {nickname}", font=font, fill="black")
+        # Draw the rank, display name, and points
+        draw.text((PADDING + 60, y_position), f"{rank}. {display_name}", font=font, fill="black")
         draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
 
         # Move to the next row
