@@ -97,7 +97,6 @@ def fetch_top_users():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
-
 async def get_member(user_id):
     retry_after = 0
     while retry_after == 0:
@@ -108,10 +107,19 @@ async def get_member(user_id):
                 return None
 
             member = await guild.fetch_member(user_id)
+
             nickname = member.nick if member.nick else member.name
-            avatar_url = member.avatar.url if member.avatar else None
+
+            # Fallback to member.name if nickname contains unsupported characters
+            try:
+                nickname.encode('ascii')
+            except UnicodeEncodeError:
+                nickname = member.name
+
+            avatar_url = str(member.avatar.url) if member.avatar else str(member.default_avatar.url)
 
             return nickname, avatar_url
+
         except discord.HTTPException as e:
             if e.status == 429:  # Rate-limited
                 retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
@@ -125,6 +133,8 @@ async def get_member(user_id):
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
 
+
+# Updated image creation to handle invalid image scenarios properly
 async def create_leaderboard_image(top_users):
     WIDTH, HEIGHT = 1000, 600
     PADDING = 10
@@ -132,16 +142,10 @@ async def create_leaderboard_image(top_users):
     img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
-    # Fetch fonts
     font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
     response = requests.get(font_url)
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
-
-    emoji_font_url = "https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf"
-    response = requests.get(emoji_font_url)
-    font_data = BytesIO(response.content)
-    emoji_font = ImageFont.truetype(font_data, size=24)
 
     y_position = PADDING
 
@@ -152,54 +156,23 @@ async def create_leaderboard_image(top_users):
 
         nickname, avatar_url = member
 
-        # Fetch user profile picture
+        # Handle image fetching or fallback gracefully
         try:
             response = requests.get(avatar_url)
-            img_pfp = Image.open(BytesIO(response.content))
-            img_pfp = img_pfp.resize((50, 50))
+            response.raise_for_status()  # Check for HTTP errors
+            img_pfp = Image.open(BytesIO(response.content)).resize((50, 50))
         except Exception as e:
             logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
-            img_pfp = Image.new('RGB', (50, 50), color='grey')
+            img_pfp = Image.new('RGB', (50, 50), color='grey')  # Fallback
 
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Draw rank and nickname with appropriate font (handling emojis)
-        rank_text = f"#{rank}"
-        rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
-        rank_width = rank_bbox[2] - rank_bbox[0]
+        # Draw rank, nickname, and XP
+        x_position = PADDING + 60  # Right of PFP
+        rank_text = f"#{rank} | {nickname} | PTS: {int(xp)}"
+        draw.text((x_position, y_position), rank_text, font=font, fill="black")
 
-        # Draw rank in the center of the PFP and nickname area
-        x_position_rank = PADDING + 60  # Position the rank to the right of the PFP
-        draw.text((x_position_rank, y_position), rank_text, font=font, fill="black")
-
-        # Position nickname and separator '|'
-        x_position = x_position_rank + rank_width + 3  # Reduced padding after rank
-        separator = " | "
-        draw.text((x_position, y_position), separator, font=font, fill="black")
-        
-        # Move x_position after separator
-        separator_width = draw.textbbox((x_position, y_position), separator, font=font)[2] - draw.textbbox((x_position, y_position), separator, font=font)[0]
-        x_position += separator_width
-
-        # Render nickname (handling emojis)
-        for char in nickname:
-            if is_emoji(char):
-                draw.text((x_position, y_position), char, font=emoji_font, fill="black")
-                bbox = draw.textbbox((x_position, y_position), char, font=emoji_font)
-                char_width = bbox[2] - bbox[0]
-                x_position += char_width
-            else:
-                draw.text((x_position, y_position), char, font=font, fill="black")
-                bbox = draw.textbbox((x_position, y_position), char, font=font)
-                char_width = bbox[2] - bbox[0]
-                x_position += char_width
-
-        # Position and render the points
-        x_position += 5  # Reduced extra padding for the points
-        points_text = f" | PTS: {int(xp)}"
-        draw.text((x_position, y_position), points_text, font=font, fill="black")
-
-        y_position += 60  # Move to next row for the next user
+        y_position += 60  # Move to the next row
 
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
@@ -207,14 +180,13 @@ async def create_leaderboard_image(top_users):
 
     return img_binary
 
+
 @tasks.loop(seconds=32)
 async def update_leaderboard():
-    global image_cache
+    global leaderboard_message, image_cache
     try:
-        # Start generating image at the 20th second
-        asyncio.create_task(pre_generate_image())
-
-        await asyncio.sleep(12)  # Wait to align with 32s mark.
+        await pre_generate_image()  # Pre-generate image at 20s
+        await asyncio.sleep(12)  # Align to 32s time-point
 
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
         if not channel:
@@ -222,22 +194,22 @@ async def update_leaderboard():
             return
 
         if leaderboard_message:
-            # Delete the previous message if it exists
             await leaderboard_message.delete()
-        
-        # Send the new leaderboard message from scratch
+
         leaderboard_message = await channel.send(file=discord.File(image_cache, filename="leaderboard.png"))
 
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
 
+
 async def pre_generate_image():
+    global image_cache
     try:
-        # Refresh data
-        top_users = fetch_top_users()
-        image_cache = await create_leaderboard_image(top_users)  # Pre-cache the image
-        
+        top_users = fetch_top_users()  # Fetch from DB
+        image_cache = await create_leaderboard_image(top_users)  # Prepare leaderboard image
     except Exception as e:
         logger.error(f"Failed to generate leaderboard image: {e}")
+        image_cache = None  # Ensure no crash, fallback
+
 
 bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI')
