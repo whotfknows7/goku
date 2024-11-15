@@ -231,6 +231,7 @@ async def get_member(user_id):
                     # Now you can explicitly get the member_id
             member_id = member.id  # This is the member's ID (same as the user ID in this context)
             logger.info(f"Member ID: {member_id}")            
+            member
             return member
         
         except discord.HTTPException as e:
