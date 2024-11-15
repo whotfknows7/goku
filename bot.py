@@ -208,7 +208,7 @@ async def get_member(user_id):
             # Fetch the member from the guild
             member = await bot.guild.fetch_member(user_id)
             # Get member nickname
-            nickname = member.nick 
+            nickname = member.nick = nickname.encode('utf-8').decode('utf-8')
             avatar_url = member.avatar_url if member.avatar_url else none
             return nickname, avatar_url
         
@@ -240,9 +240,24 @@ async def create_leaderboard_image(top_users):
     # Path to the font you downloaded (e.g., Noto Sans or Noto Color Emoji)
     font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"  # Update this path
     font = ImageFont.truetype(font_path, size=24)
-    emoji_font_path = "emoji_font_url = "https://example.com/path/to/emoji-font.ttf"  # Replace with actual emoji font URL
-    emoji_font = ImageFont.truetype(emoji_font_path, size=24)
+    emoji_font_url = "https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf"  # Replace with actual emoji font URL
+    # Sample text with both regular and emoji characters
+    text = "Hello! 🎉 You're ranked #1! 🌟"
 
+    img = Image.new("RGB", (1000, 600), color='white')
+    draw = ImageDraw.Draw(img)
+
+    y_position = 10
+
+    # Loop through each character and check if it's an emoji
+    for char in text:
+    if is_emoji(char):
+        draw.text((10, y_position), char, font=emoji_font, fill="black")
+    else:
+        draw.text((10, y_position), char, font=regular_font, fill="black")
+    y_position += 30  # Move to next line
+
+    img.show()
     # Initial position for the leaderboard content
     y_position = PADDING
 
@@ -288,10 +303,15 @@ async def create_leaderboard_image(top_users):
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")  # Save directly into the BytesIO buffer
     img_binary.seek(0)  # Go to the start of the BytesIO buffer
+    
     response = requests.get(font_url)
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
     return img_binary  # Return the open BytesIO buffer (not closed)
+
+    response = requests.get(emoji_font_url)
+    font_data = BytesIO(response.content)
+    emoji_font = ImageFont.truetype(font_data, size=24)
 
 @tasks.loop(seconds=20)  # Run every 20 seconds
 async def update_leaderboard():
