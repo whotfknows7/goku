@@ -199,21 +199,7 @@ async getMember(guildID, userID) {
     userID = userID.match(/[0-9]+/);
     if (!userID) return;
     userID = userID[0];
-    let member = guild.members[userID]; // Accessing member by userID directly
-    if (member) {
-        member.status = member.user.presence?.status;
-    } else {
-        try {
-            member = await guild.getRESTMember(userID);
-        } catch (e) {
-            return;
-        }
-        if (!member.id) member.id = member.user.id;
-        if (!member.status) member.status = member.user.presence?.status;
-        if (member && cache) {
-            guild.members.add(member, guild, false);
-        }
-    }
+    let member = guild.members.get[userID]; // Accessing member by userID directly
     return member;
 }
 
