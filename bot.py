@@ -195,15 +195,22 @@ def fetch_top_users():
 
     return cursor.fetchall()
 async def get_member(user_id):
+
     retry_after = 0
+
     while retry_after == 0:
+
         try:
+            # Fetch the guild using the correct method
             guild = bot.get_guild(GUILD_ID)
+
             if not guild:
                 logger.error(f"Guild with ID {GUILD_ID} not found")
                 return None
 
-            member = await bot.guild.fetch_member(user_id)
+            # Use the guild to fetch the member
+            member = await guild.fetch_member(user_id)
+
             nickname = member.nick if member.nick else member.name
             avatar_url = member.avatar_url if member.avatar_url else None
 
@@ -213,6 +220,7 @@ async def get_member(user_id):
             if e.status == 429:  # Rate-limited
                 retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
                 wait_time = retry_after - time.time()
+
                 if wait_time > 0:
                     logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
                     await asyncio.sleep(wait_time)
@@ -223,6 +231,7 @@ async def get_member(user_id):
                 return None
 
 async def create_leaderboard_image(top_users):
+
     WIDTH, HEIGHT = 1000, 600
     PADDING = 10
 
@@ -242,6 +251,7 @@ async def create_leaderboard_image(top_users):
 
     # Render leaderboard
     y_position = PADDING
+
     for rank, (user_id, xp) in enumerate(top_users, 1):
         member = await get_member(user_id)
         if not member:
@@ -261,19 +271,30 @@ async def create_leaderboard_image(top_users):
         img.paste(img_pfp, (PADDING, y_position))
 
         # Render nickname with appropriate font (handling emojis)
+        x_position = PADDING + 60  # Start after avatar
+
         for char in nickname:
             if is_emoji(char):
-                draw.text((PADDING + 60, y_position), char, font=emoji_font, fill="black")
+                draw.text((x_position, y_position), char, font=emoji_font, fill="black")
+                bbox = draw.textbbox((x_position, y_position), char, font=emoji_font)  # Get bounding box
+                char_width = bbox[2] - bbox[0]  # Calculate width from the bounding box
+                x_position += char_width  # Increment x_position
             else:
-                draw.text((PADDING + 60, y_position), char, font=font, fill="black")
+                draw.text((x_position, y_position), char, font=font, fill="black")
+                bbox = draw.textbbox((x_position, y_position), char, font=font)  # Get bounding box
+                char_width = bbox[2] - bbox[0]  # Calculate width from the bounding box
+                x_position += char_width  # Increment x_position
 
-        draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
-        y_position += 60
+        draw.text((x_position + 10, y_position), f"Points: {int(xp)}", font=font, fill="black")
+
+        y_position += 60  # Move to next row for the next user
 
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
-    return img_binarytasks
+
+    return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
