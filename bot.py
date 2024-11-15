@@ -193,21 +193,19 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
 
     return cursor.fetchall()
+
 async getMember(guildID, userID) {
     if (!userID) return;
     let guild = guildID;
     userID = userID.match(/[0-9]+/);
     if (!userID) return;
     userID = userID[0];
-    let member = guild.members.get[userID]; // Accessing member by userID directly
-    return member;
-}
+    let member = guild.members.get(userID);  // Correct usage of get method
 
-async def get_user_data(user_id):
     retry_after = 0
     while retry_after == 0:
         try:
-            user = await bot.fetch_user(user_id)  # Fetching the user object using their ID
+            user = await guild.fetchMember(userID) 
             display_name = user.display_name  # Use display_name instead of nick
             avatar_url = user.avatar_url if user.avatar else None  # Get avatar URL
             return display_name, avatar_url  # Return display name (not nickname) and avatar URL
