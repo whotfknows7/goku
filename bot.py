@@ -238,7 +238,7 @@ async def create_leaderboard_image(top_users):
 
     
     # Path to the font you downloaded (e.g., Noto Sans or Noto Color Emoji)
-    font_path = ""  # Update this path
+    font_url = ""  # Update this path
     font = ImageFont.truetype(font_path, size=24)
 
     # Initial position for the leaderboard content
@@ -286,7 +286,9 @@ async def create_leaderboard_image(top_users):
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")  # Save directly into the BytesIO buffer
     img_binary.seek(0)  # Go to the start of the BytesIO buffer
-
+    response = requests.get(font_url)
+    font_data = BytesIO(response.content)
+    font = ImageFont.truetype(font_data, size=24)
     return img_binary  # Return the open BytesIO buffer (not closed)
 
 @tasks.loop(seconds=20)  # Run every 20 seconds
