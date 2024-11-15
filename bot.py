@@ -198,9 +198,12 @@ async def fetch_font_data(url):
         async with session.get(url) as response:
             return await response.read()
 
+import aiohttp
+
 async def fetch_avatar(avatar_url):
-    if avatar_url:
+    if avatar_url and isinstance(avatar_url, str):
         try:
+            # Use async with to ensure the session is properly closed after the request
             async with aiohttp.ClientSession() as session:
                 async with session.get(avatar_url) as response:
                     if response.status == 200:
@@ -208,19 +211,19 @@ async def fetch_avatar(avatar_url):
                         img_pfp = Image.open(BytesIO(img_data))
                         img_pfp = img_pfp.resize((50, 50))  # Resize avatar
                         return img_pfp
+                    else:
+                        logger.error(f"Failed to fetch avatar from {avatar_url}: {response.status}")
+                        return Image.new('RGB', (50, 50), color='grey')  # Return a placeholder if response is not OK
         except Exception as e:
             logger.error(f"Failed to fetch avatar from {avatar_url}: {e}")
             return Image.new('RGB', (50, 50), color='grey')  # Return a placeholder if there's an error
     else:
-        return Image.new('RGB', (50, 50), color='grey')  # Return a placeholder if avatar_url is None
+        logger.error(f"Invalid avatar URL: {avatar_url}")
+        return Image.new('RGB', (50, 50), color='grey')  # Return a placeholder if avatar_url is None or not a string
 
 async def get_member(user_id):
-
-
     retry_after = 0
-
     while retry_after == 0:
-
         try:
             # Fetch the guild using the correct method
             guild = bot.get_guild(GUILD_ID)
@@ -233,9 +236,17 @@ async def get_member(user_id):
             member = await guild.fetch_member(user_id)
 
             nickname = member.nick if member.nick else member.name
-            avatar_url = member.avatar_url if member.avatar_url else None
+            avatar_url = member.avatar.url if member.avatar else None
 
-            return nickname, avatar_url
+            # If avatar_url is already a string, no need to call `.url` again
+            if isinstance(avatar_url, str):
+                return nickname, avatar_url
+
+            # Otherwise, it must be an Asset object, so get the URL
+            if avatar_url:
+                return nickname, avatar_url.url
+
+            return nickname, None
 
         except discord.HTTPException as e:
             if e.status == 429:  # Rate-limited
@@ -250,6 +261,7 @@ async def get_member(user_id):
             else:
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
+
 async def create_leaderboard_image(top_users):
     WIDTH, HEIGHT = 1000, 600
     PADDING = 20
@@ -259,7 +271,7 @@ async def create_leaderboard_image(top_users):
     img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
-    # Fetch the regular font (no need for emoji font anymore)
+    # Fetch the regular font
     font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
     font_data = await fetch_font_data(font_url)  # Fetch font data from URL
     font = ImageFont.truetype(BytesIO(font_data), size=24)
@@ -277,13 +289,7 @@ async def create_leaderboard_image(top_users):
 
         nickname, avatar_url = member
 
-        try:
-            response = await aiohttp.ClientSession().get(avatar_url)
-            img_pfp = Image.open(BytesIO(await response.read()))
-            img_pfp = img_pfp.resize((50, 50))
-        except Exception as e:
-            logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
-            img_pfp = Image.new('RGB', (50, 50), color='grey')
+        img_pfp = await fetch_avatar(avatar_url)
 
         col_x_position = x_positions[rank - 1]
         img.paste(img_pfp, (col_x_position, y_position))
