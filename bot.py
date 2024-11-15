@@ -229,9 +229,7 @@ async def get_member(user_id):
             else:
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
-
 async def create_leaderboard_image(top_users):
-
     WIDTH, HEIGHT = 1000, 600
     PADDING = 10
 
@@ -270,22 +268,37 @@ async def create_leaderboard_image(top_users):
 
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Render nickname with appropriate font (handling emojis)
-        x_position = PADDING + 60  # Start after avatar
+        # Draw rank and nickname with appropriate font (handling emojis)
+        rank_text = f"#{rank}"
+        rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
+        rank_width = rank_bbox[2] - rank_bbox[0]
+        x_position_rank = PADDING + 55  # Position the rank to the right of the PFP
 
+        # Draw rank in the center of the PFP and nickname area
+        draw.text((x_position_rank, y_position), rank_text, font=font, fill="black")
+
+        # Position nickname and separator '|'
+        x_position = x_position_rank + rank_width + 10  # Add a little padding after rank
+        separator = " | "
+        draw.text((x_position, y_position), separator, font=font, fill="black")
+        x_position += draw.textbbox((x_position, y_position), separator, font=font)[2] - draw.textbbox((x_position, y_position), separator, font=font)[0]  # Move x_position after separator
+
+        # Render nickname (handling emojis)
         for char in nickname:
             if is_emoji(char):
                 draw.text((x_position, y_position), char, font=emoji_font, fill="black")
-                bbox = draw.textbbox((x_position, y_position), char, font=emoji_font)  # Get bounding box
-                char_width = bbox[2] - bbox[0]  # Calculate width from the bounding box
-                x_position += char_width  # Increment x_position
+                bbox = draw.textbbox((x_position, y_position), char, font=emoji_font)
+                char_width = bbox[2] - bbox[0]
+                x_position += char_width
             else:
                 draw.text((x_position, y_position), char, font=font, fill="black")
-                bbox = draw.textbbox((x_position, y_position), char, font=font)  # Get bounding box
-                char_width = bbox[2] - bbox[0]  # Calculate width from the bounding box
-                x_position += char_width  # Increment x_position
+                bbox = draw.textbbox((x_position, y_position), char, font=font)
+                char_width = bbox[2] - bbox[0]
+                x_position += char_width
 
-        draw.text((x_position + 10, y_position), f"Points: {int(xp)}", font=font, fill="black")
+        # Position and render the points
+        x_position += 10  # Extra padding for the points
+        draw.text((x_position, y_position), f"Points: {int(xp)}", font=font, fill="black")
 
         y_position += 60  # Move to next row for the next user
 
