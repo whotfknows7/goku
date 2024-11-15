@@ -19,7 +19,7 @@ from io import BytesIO
 
 # Rollbar initialization
 rollbar.init(
-    access_token='YOUR_ACCESS_TOKEN',  # Replace with your actual Rollbar token
+    access_token='cfd2554cc40741fca49e3d8d6502f039',  # Replace with your actual Rollbar token
     environment='testenv',
     code_version='1.0'
 )
@@ -70,6 +70,7 @@ async def fetch_font(font_url, size=24):
 async def get_member(user_id):
     """Fetch a guild member and their avatar URL."""
     guild = bot.get_guild(GUILD_ID)
+
     if not guild:
         logger.error("Guild not found")
         return None
@@ -77,8 +78,12 @@ async def get_member(user_id):
     try:
         member = await guild.fetch_member(user_id)
         nickname = member.nick or member.name
-        avatar_url = member.avatar_url_as(format="png")  # Compatible with v1.7.3
+
+        # Ensure avatar_url is not None
+        avatar_url = member.avatar_url if member.avatar_url else none
+
         return nickname, avatar_url
+
     except discord.HTTPException as e:
         logger.error(f"Error fetching member {user_id}: {e}")
         return None
@@ -88,8 +93,8 @@ async def create_leaderboard_image(top_users):
     img = Image.new("RGB", (1000, 600), color='white')
     draw = ImageDraw.Draw(img)
 
-    font = await fetch_font("https://example.com/NotoSans-Regular.ttf", size=24)
-    emoji_font = await fetch_font("https://example.com/NotoColorEmoji.ttf", size=24)
+    font = await fetch_font("https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf", size=24)
+    emoji_font = await fetch_font("https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf", size=24)
 
     y_position = 10
 
