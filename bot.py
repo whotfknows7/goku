@@ -194,7 +194,6 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
 
     return cursor.fetchall()
-
 async def get_member(user_id):
     retry_after = 0
 
@@ -209,7 +208,7 @@ async def get_member(user_id):
             # Fetch the member from the guild
             member = await bot.guild.fetch_member(user_id)
             # Get member nickname
-            nickname = member.nick if member.nick else member.
+            nickname = member.nick if member.nick else member.name
             avatar_url = member.avatar_url if member.avatar_url else none
             return nickname, avatar_url
         
