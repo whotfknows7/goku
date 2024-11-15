@@ -194,26 +194,6 @@ def fetch_top_users():
 
     return cursor.fetchall()
 
-async def get_user_data(user_id):
-    retry_after = 0
-    while retry_after == 0:
-        try:
-            user = await bot.fetch_user(user_id)  # Fetching the user object using their ID
-            display_name = user.display_name  # Use display_name instead of nick
-            avatar_url = user.avatar_url if user.avatar else None  # Get avatar URL
-            return display_name, avatar_url  # Return display name (not nickname) and avatar URL
-        except discord.HTTPException as e:
-            if e.status == 429:  # Rate-limited
-                retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
-                wait_time = retry_after - time.time()
-                if wait_time > 0:
-                    logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
-                    await asyncio.sleep(wait_time)
-                else:
-                    raise
-            else:
-                return None, None  # In case of error, return None
-
 async def get_member(user_id):
     retry_after = 0
     GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
@@ -227,10 +207,11 @@ async def get_member(user_id):
                 return None
 
             # Fetch the member from the guild
-            member = await guild.fetch_member(user_id)
+            member = await bot.guild.fetch_member(user_id)
             # Get member nickname
             nickname = member.nick if member.nick else member.name
-            return nickname
+            avatar_url = member.avatar_url if member.avatar_url else none
+            return nickname, avatar_url
         
         except discord.HTTPException as e:
             if e.status == 429:  # Rate-limited
@@ -264,10 +245,10 @@ async def create_leaderboard_image(top_users):
 
     # Loop through the top users to add their info to the image
     for rank, (user_id, xp) in enumerate(top_users, 1):
-        display_name, avatar_url = await get_user_data(user_id)  # Use display name here
+        nickname, avatar_url = await bot.guild.fetch_member(user_id)  # Use display name here
         
         # Fallback to using "Unknown User" if no display name is found
-        if not display_name:
+        if not nickname:
             display_name = "Unknown User"
 
         # Fetch user profile picture and resize it for the image
@@ -283,7 +264,7 @@ async def create_leaderboard_image(top_users):
         img.paste(img_pfp, (PADDING, y_position))
 
         # Draw the rank, display name, and points
-        draw.text((PADDING + 60, y_position), f"{rank}. {display_name}", font=font, fill="black")
+        draw.text((PADDING + 60, y_position), f"{rank}. {nickname}", font=font, fill="black")
         draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
 
         # Move to the next row
