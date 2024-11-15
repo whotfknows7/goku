@@ -196,124 +196,85 @@ def fetch_top_users():
     return cursor.fetchall()
 async def get_member(user_id):
     retry_after = 0
-
     while retry_after == 0:
         try:
-            # Fetch the guild using the hardcoded GUILD_ID
             guild = bot.get_guild(GUILD_ID)
             if not guild:
                 logger.error(f"Guild with ID {GUILD_ID} not found")
                 return None
 
-            # Fetch the member from the guild
             member = await bot.guild.fetch_member(user_id)
-            # Get member nickname
-            nickname = member.nick = nickname.encode('utf-8').decode('utf-8')
-            avatar_url = member.avatar_url if member.avatar_url else none
+            nickname = member.nick if member.nick else member.name
+            avatar_url = member.avatar_url if member.avatar_url else None
+
             return nickname, avatar_url
-        
+
         except discord.HTTPException as e:
             if e.status == 429:  # Rate-limited
                 retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
                 wait_time = retry_after - time.time()
-
                 if wait_time > 0:
                     logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
                     await asyncio.sleep(wait_time)
                 else:
                     raise
-
             else:
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
 
 async def create_leaderboard_image(top_users):
-    # Image size and padding
     WIDTH, HEIGHT = 1000, 600
     PADDING = 10
 
-    # Create a blank image
     img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
-    
-    # Path to the font you downloaded (e.g., Noto Sans or Noto Color Emoji)
-    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"  # Update this path
-    font = ImageFont.truetype(font_path, size=24)
-    emoji_font_url = "https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf"  # Replace with actual emoji font URL
-    # Sample text with both regular and emoji characters
-    text = "Hello! 🎉 You're ranked #1! 🌟"
-
-    img = Image.new("RGB", (1000, 600), color='white')
-    draw = ImageDraw.Draw(img)
-
-    y_position = 10
-
-    # Loop through each character and check if it's an emoji
-    for char in text:
-    if is_emoji(char):
-        draw.text((10, y_position), char, font=emoji_font, fill="black")
-    else:
-        draw.text((10, y_position), char, font=regular_font, fill="black")
-    y_position += 30  # Move to next line
-
-    img.show()
-    # Initial position for the leaderboard content
-    y_position = PADDING
-
-    # Fetch the guild using bot.get_guild()
-    guild = bot.get_guild(GUILD_ID)  # Ensure this is the correct guild ID
-
-    if not guild:
-        logger.error(f"Guild with ID {GUILD_ID} not found")
-        return None
-
-    # Loop through the top users to add their info to the image
-    for rank, (user_id, xp) in enumerate(top_users, 1):
-        member = guild.get_member(user_id)  # Use get_member to get the member from the guild
-        
-        # If the member is not found, log an error and skip
-        if not member:
-            logger.error(f"Member with ID {user_id} not found in the guild.")
-            continue
-        
-        nickname = member.nick 
-        avatar_url = member.avatar_url if member.avatar_url else None
-
-        # Fetch user profile picture and resize it for the image
-        try:
-            response = requests.get(avatar_url)
-            img_pfp = Image.open(BytesIO(response.content))
-            img_pfp = img_pfp.resize((50, 50))  # Resize to 50x50 pixels
-        except Exception as e:
-            logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
-            img_pfp = Image.new('RGB', (50, 50), color='grey')  # Placeholder if avatar fetch fails
-
-        # Draw the profile picture (left-aligned)
-        img.paste(img_pfp, (PADDING, y_position))
-
-        # Draw the rank, display name, and points
-        draw.text((PADDING + 60, y_position), f"{rank}. {nickname}", font=font, fill="black")
-        draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
-
-        # Move to the next row
-        y_position += 60  # Adjust space between rows
-
-    # Save the image in memory
-    img_binary = BytesIO()
-    img.save(img_binary, format="PNG")  # Save directly into the BytesIO buffer
-    img_binary.seek(0)  # Go to the start of the BytesIO buffer
-    
+    # Fetch fonts
+    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
     response = requests.get(font_url)
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
-    return img_binary  # Return the open BytesIO buffer (not closed)
 
+    emoji_font_url = "https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf"
     response = requests.get(emoji_font_url)
     font_data = BytesIO(response.content)
     emoji_font = ImageFont.truetype(font_data, size=24)
 
-@tasks.loop(seconds=20)  # Run every 20 seconds
+    # Render leaderboard
+    y_position = PADDING
+    for rank, (user_id, xp) in enumerate(top_users, 1):
+        member = await get_member(user_id)
+        if not member:
+            continue
+
+        nickname, avatar_url = member
+
+        # Fetch user profile picture
+        try:
+            response = requests.get(avatar_url)
+            img_pfp = Image.open(BytesIO(response.content))
+            img_pfp = img_pfp.resize((50, 50))
+        except Exception as e:
+            logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
+            img_pfp = Image.new('RGB', (50, 50), color='grey')
+
+        img.paste(img_pfp, (PADDING, y_position))
+
+        # Render nickname with appropriate font (handling emojis)
+        for char in nickname:
+            if is_emoji(char):
+                draw.text((PADDING + 60, y_position), char, font=emoji_font, fill="black")
+            else:
+                draw.text((PADDING + 60, y_position), char, font=font, fill="black")
+
+        draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
+        y_position += 60
+
+    img_binary = BytesIO()
+    img.save(img_binary, format="PNG")
+    img_binary.seek(0)
+    return img_binarytasks
+@tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
