@@ -195,25 +195,18 @@ def fetch_top_users():
 
     return cursor.fetchall()
 async def get_member(user_id):
-
     retry_after = 0
 
     while retry_after == 0:
-
         try:
-            # Fetch the guild using the correct method
             guild = bot.get_guild(GUILD_ID)
-
             if not guild:
                 logger.error(f"Guild with ID {GUILD_ID} not found")
                 return None
 
-            # Use the guild to fetch the member
             member = await guild.fetch_member(user_id)
-
             nickname = member.nick if member.nick else member.name
             avatar_url = member.avatar_url if member.avatar_url else None
-
             return nickname, avatar_url
 
         except discord.HTTPException as e:
@@ -226,26 +219,28 @@ async def get_member(user_id):
                     await asyncio.sleep(wait_time)
                 else:
                     raise
+
             else:
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
+
+async def fetch_font(font_url):
+    try:
+        response = requests.get(font_url)
+        font_data = BytesIO(response.content)
+        return ImageFont.truetype(font_data, size=24)
+    except requests.RequestException as e:
+        logger.error(f"Error fetching font from {font_url}: {e}")
+        raise
+
 async def create_leaderboard_image(top_users):
     WIDTH, HEIGHT = 1000, 600
     PADDING = 10
-
     img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
-    # Fetch fonts
-    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
-    response = requests.get(font_url)
-    font_data = BytesIO(response.content)
-    font = ImageFont.truetype(font_data, size=24)
-
-    emoji_font_url = "https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf"
-    response = requests.get(emoji_font_url)
-    font_data = BytesIO(response.content)
-    emoji_font = ImageFont.truetype(font_data, size=24)
+    font = await fetch_font("https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf")
+    emoji_font = await fetch_font("https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf")
 
     y_position = PADDING
 
@@ -271,17 +266,14 @@ async def create_leaderboard_image(top_users):
         rank_text = f"#{rank}"
         rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
         rank_width = rank_bbox[2] - rank_bbox[0]
-
-        # Draw rank in the center of the PFP and nickname area
         x_position_rank = PADDING + 55  # Position the rank to the right of the PFP
         draw.text((x_position_rank, y_position), rank_text, font=font, fill="black")
 
         # Position nickname and separator '|'
-        x_position = x_position_rank + rank_width + 5  # Reduced padding after rank
+        x_position = x_position_rank + rank_width + 5
         separator = " | "
         draw.text((x_position, y_position), separator, font=font, fill="black")
-        
-        # Move x_position after separator
+
         separator_width = draw.textbbox((x_position, y_position), separator, font=font)[2] - draw.textbbox((x_position, y_position), separator, font=font)[0]
         x_position += separator_width
 
@@ -299,7 +291,7 @@ async def create_leaderboard_image(top_users):
                 x_position += char_width
 
         # Position and render the points
-        x_position += 5  # Reduced extra padding for the points
+        x_position += 5
         points_text = f" | PTS: {int(xp)}"
         draw.text((x_position, y_position), points_text, font=font, fill="black")
 
@@ -310,7 +302,6 @@ async def create_leaderboard_image(top_users):
     img_binary.seek(0)
 
     return img_binary
-
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
