@@ -32,9 +32,10 @@ import time
 
 from PIL import Image, ImageDraw, ImageFont
 
-import requests
 
+import aiohttp
 from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
 
 
@@ -194,9 +195,22 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
 
     return cursor.fetchall()
+async def fetch_font(font_url):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(font_url) as response:
+                if response.status == 200:
+                    font_data = BytesIO(await response.read())  # Reading the font as bytes
+                    return ImageFont.truetype(font_data, size=24)
+                else:
+                    logger.error(f"Error fetching font from {font_url}: {response.status}")
+                    raise Exception(f"Failed to fetch font from {font_url}")
+    except aiohttp.ClientError as e:
+        logger.error(f"Error with aiohttp client while fetching font from {font_url}: {e}")
+        raise
+
 async def get_member(user_id):
     retry_after = 0
-
     while retry_after == 0:
         try:
             guild = bot.get_guild(GUILD_ID)
@@ -206,32 +220,21 @@ async def get_member(user_id):
 
             member = await guild.fetch_member(user_id)
             nickname = member.nick if member.nick else member.name
-            avatar_url = member.avatar_url if member.avatar_url else None
+            avatar_url = str(member.avatar_url) if member.avatar_url else None
             return nickname, avatar_url
 
         except discord.HTTPException as e:
             if e.status == 429:  # Rate-limited
                 retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
                 wait_time = retry_after - time.time()
-
                 if wait_time > 0:
                     logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
                     await asyncio.sleep(wait_time)
                 else:
                     raise
-
             else:
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
-
-async def fetch_font(font_url):
-    try:
-        response = requests.get(font_url)
-        font_data = BytesIO(response.content)
-        return ImageFont.truetype(font_data, size=24)
-    except requests.RequestException as e:
-        logger.error(f"Error fetching font from {font_url}: {e}")
-        raise
 
 async def create_leaderboard_image(top_users):
     WIDTH, HEIGHT = 1000, 600
@@ -239,6 +242,7 @@ async def create_leaderboard_image(top_users):
     img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
+    # Fetch fonts asynchronously
     font = await fetch_font("https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf")
     emoji_font = await fetch_font("https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf")
 
@@ -253,9 +257,10 @@ async def create_leaderboard_image(top_users):
 
         # Fetch user profile picture
         try:
-            response = requests.get(avatar_url)
-            img_pfp = Image.open(BytesIO(response.content))
-            img_pfp = img_pfp.resize((50, 50))
+            async with aiohttp.ClientSession() as session:
+                async with session.get(avatar_url) as response:
+                    img_pfp = Image.open(BytesIO(await response.read()))
+                    img_pfp = img_pfp.resize((50, 50))
         except Exception as e:
             logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
             img_pfp = Image.new('RGB', (50, 50), color='grey')
@@ -301,7 +306,6 @@ async def create_leaderboard_image(top_users):
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
 
-    return img_binary
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
