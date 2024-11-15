@@ -54,7 +54,7 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 # Placeholder for the leaderboard message
 leaderboard_message = None
 # Constants for image dimensions
-WIDTH, HEIGHT = 1000, 600  # Set image size
+WIDTH, HEIGHT = 702, 600  # Set image size
 PADDING = 10  # Space from the edges of the image
 
 # Function to count custom emojis in a message
@@ -152,10 +152,10 @@ async def create_leaderboard_image(top_users):
         try:
             response = requests.get(avatar_url)
             img_pfp = Image.open(BytesIO(response.content))
-            img_pfp = img_pfp.resize((50, 50))
+            img_pfp = img_pfp.resize((60, 60))
         except Exception as e:
             logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
-            img_pfp = Image.new('RGB', (50, 50), color='grey')
+            img_pfp = Image.new('RGB', (60, 60), color='grey')
 
         img.paste(img_pfp, (PADDING, y_position))
 
