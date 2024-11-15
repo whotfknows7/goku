@@ -230,8 +230,10 @@ async def get_member(user_id):
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
 async def create_leaderboard_image(top_users):
-    WIDTH, HEIGHT = 1000, 600
-    PADDING = 10
+    WIDTH, HEIGHT = 1000, 600  # Adjust width and height as needed
+    PADDING = 20
+    COLUMN_WIDTH = 200  # Width of each column
+    NUM_COLUMNS = 5  # Number of columns (you can adjust this)
 
     img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
@@ -247,9 +249,15 @@ async def create_leaderboard_image(top_users):
     font_data = BytesIO(response.content)
     emoji_font = ImageFont.truetype(font_data, size=24)
 
-    y_position = PADDING
+    # Position the columns for the ranks
+    x_positions = [PADDING + (COLUMN_WIDTH * i) for i in range(NUM_COLUMNS)]  # List of column x positions
+    y_position = PADDING  # Start drawing from the top
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
+        if rank > NUM_COLUMNS:  # Stop if we exceed the column limit
+            break
+
+        # Fetch member data
         member = await get_member(user_id)
         if not member:
             continue
@@ -265,51 +273,47 @@ async def create_leaderboard_image(top_users):
             logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
             img_pfp = Image.new('RGB', (50, 50), color='grey')
 
-        img.paste(img_pfp, (PADDING, y_position))
+        # Create a new column for each rank
+        col_x_position = x_positions[rank - 1]
 
-        # Draw rank and nickname with appropriate font (handling emojis)
+        # Paste the profile picture on the left side of each column
+        img.paste(img_pfp, (col_x_position, y_position))
+
+        # Draw rank, nickname, and points in each column
         rank_text = f"#{rank}"
-        rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
-        rank_width = rank_bbox[2] - rank_bbox[0]
+        draw.text((col_x_position + 60, y_position), rank_text, font=font, fill="black")
 
-        # Draw rank in the center of the PFP and nickname area
-        x_position_rank = PADDING + 45  # Position the rank to the right of the PFP
-        draw.text((x_position_rank, y_position), rank_text, font=font, fill="black")
-
-        # Position nickname and separator '|'
-        x_position = x_position_rank + rank_width + 3  # Reduced padding after rank
-        separator = " | "
-        draw.text((x_position, y_position), separator, font=font, fill="black")
-        
-        # Move x_position after separator
-        separator_width = draw.textbbox((x_position, y_position), separator, font=font)[2] - draw.textbbox((x_position, y_position), separator, font=font)[0]
-        x_position += separator_width
-
-        # Render nickname (handling emojis)
+        # Position the nickname
+        nickname_x_position = col_x_position + 60 + 50  # Position after the profile picture
         for char in nickname:
             if is_emoji(char):
-                draw.text((x_position, y_position), char, font=emoji_font, fill="black")
-                bbox = draw.textbbox((x_position, y_position), char, font=emoji_font)
+                draw.text((nickname_x_position, y_position), char, font=emoji_font, fill="black")
+                bbox = draw.textbbox((nickname_x_position, y_position), char, font=emoji_font)
                 char_width = bbox[2] - bbox[0]
-                x_position += char_width
+                nickname_x_position += char_width
             else:
-                draw.text((x_position, y_position), char, font=font, fill="black")
-                bbox = draw.textbbox((x_position, y_position), char, font=font)
+                draw.text((nickname_x_position, y_position), char, font=font, fill="black")
+                bbox = draw.textbbox((nickname_x_position, y_position), char, font=font)
                 char_width = bbox[2] - bbox[0]
-                x_position += char_width
+                nickname_x_position += char_width
 
-        # Position and render the points
-        x_position += 5  # Reduced extra padding for the points
-        points_text = f" | PTS: {int(xp)}"
-        draw.text((x_position, y_position), points_text, font=font, fill="black")
+        # Draw points
+        points_text = f"PTS: {int(xp)}"
+        draw.text((nickname_x_position + 5, y_position), points_text, font=font, fill="black")
 
-        y_position += 60  # Move to next row for the next user
+        # Move down to the next row
+        y_position += 100  # Adjust for more spacing between rows
+
+    # Draw column separators
+    for x in x_positions[1:]:  # Skip the first column since it has no separator before it
+        draw.line([(x, PADDING), (x, HEIGHT - PADDING)], fill="black", width=2)
 
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
 
     return img_binary
+
 
 @tasks.loop(seconds=20)
 async def update_leaderboard():
