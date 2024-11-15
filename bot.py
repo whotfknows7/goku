@@ -193,13 +193,10 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
 
     return cursor.fetchall()
-async getMember(guildID, userID) {
-    if (!userID) return;
-    let guild = guildID;
-    userID = userID.match(/[0-9]+/);
-    if (!userID) return;
-    userID = userID[0];
-    let member = guild.members.get[userID]; // Accessing member by userID directly
+
+async getMember(guild_id, user_id)
+    let
+    let member = guild.members.get(userID); // Accessing member by userID directly
     return member;
 }
 
