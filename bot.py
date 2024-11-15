@@ -236,17 +236,17 @@ async def get_member(user_id):
             member = await guild.fetch_member(user_id)
 
             nickname = member.nick if member.nick else member.name
-            avatar_url = member.avatar.url if member.avatar else None
 
-            # If avatar_url is already a string, no need to call `.url` again
-            if isinstance(avatar_url, str):
-                return nickname, avatar_url
+            # Ensure we're safely accessing avatar_url
+            if member.avatar:
+                avatar_url = member.avatar.url  # Get the URL from the avatar object
+            else:
+                avatar_url = None  # No avatar set
 
-            # Otherwise, it must be an Asset object, so get the URL
-            if avatar_url:
-                return nickname, avatar_url.url
+            # Log the avatar URL and the user ID for debugging purposes
+            logger.debug(f"Fetched member {nickname} with avatar URL: {avatar_url}")
 
-            return nickname, None
+            return nickname, avatar_url
 
         except discord.HTTPException as e:
             if e.status == 429:  # Rate-limited
@@ -289,7 +289,25 @@ async def create_leaderboard_image(top_users):
 
         nickname, avatar_url = member
 
-        img_pfp = await fetch_avatar(avatar_url)
+        # Check if avatar_url is a valid string
+        if avatar_url and isinstance(avatar_url, str):
+            try:
+                logger.debug(f"Attempting to fetch avatar for {nickname} with URL: {avatar_url}")
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(avatar_url) as response:
+                        if response.status == 200:
+                            img_data = await response.read()
+                            img_pfp = Image.open(BytesIO(img_data))
+                            img_pfp = img_pfp.resize((50, 50))  # Resize avatar
+                        else:
+                            img_pfp = Image.new('RGB', (50, 50), color='grey')  # Placeholder for failed fetch
+            except Exception as e:
+                logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
+                img_pfp = Image.new('RGB', (50, 50), color='grey')  # Placeholder for error
+        else:
+            logger.error(f"Invalid avatar URL for user {nickname}. URL: {avatar_url}")
+            img_pfp = Image.new('RGB', (50, 50), color='grey')  # Placeholder if no avatar
 
         col_x_position = x_positions[rank - 1]
         img.paste(img_pfp, (col_x_position, y_position))
@@ -298,9 +316,11 @@ async def create_leaderboard_image(top_users):
         draw.text((col_x_position + 60, y_position), rank_text, font=font, fill="black")
 
         nickname_x_position = col_x_position + 60 + 50
+
+        # Drawing the nickname, handling emojis
         for char in nickname:
-            if is_emoji(char):  # Check if the character is an emoji
-                draw.text((nickname_x_position, y_position), char, font=font, fill="black")  # Treat emoji as normal text
+            if is_emoji(char):
+                draw.text((nickname_x_position, y_position), char, font=font, fill="black")  # Draw emoji
                 bbox = draw.textbbox((nickname_x_position, y_position), char, font=font)
                 char_width = bbox[2] - bbox[0]
                 nickname_x_position += char_width
@@ -315,6 +335,7 @@ async def create_leaderboard_image(top_users):
 
         y_position += 100
 
+    # Draw column lines
     for x in x_positions[1:]:
         draw.line([(x, PADDING), (x, HEIGHT - PADDING)], fill="black", width=2)
 
@@ -323,6 +344,7 @@ async def create_leaderboard_image(top_users):
     img_binary.seek(0)
 
     return img_binary
+
 
 
 @tasks.loop(seconds=20)
