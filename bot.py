@@ -258,7 +258,7 @@ async def create_leaderboard_image(top_users):
             logger.error(f"Member with ID {user_id} not found in the guild.")
             continue
         
-        nickname = member.nick if member.nick else member.name
+        nickname = member.nick 
         avatar_url = member.avatar_url if member.avatar_url else None
 
         # Fetch user profile picture and resize it for the image
