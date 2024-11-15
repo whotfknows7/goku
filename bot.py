@@ -194,6 +194,7 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
 
     return cursor.fetchall()
+# Fetch member details with fallback to member.name
 async def get_member(user_id):
     retry_after = 0
     while retry_after == 0:
@@ -203,9 +204,15 @@ async def get_member(user_id):
                 logger.error(f"Guild with ID {GUILD_ID} not found")
                 return None
 
-            member = await bot.guild.fetch_member(user_id)
-            nickname = member.nick if member.nick else member.name
-            avatar_url = member.avatar_url if member.avatar_url else None
+            member = await guild.fetch_member(user_id)
+            
+            # Use member.name if nickname contains unsupported characters
+            if not all(c.isprintable() for c in (member.nick if member.nick else member.name)):
+                nickname = member.name
+            else:
+                nickname = member.nick if member.nick else member.name
+            
+            avatar_url = member.avatar.url if member.avatar else member.default_avatar.url
 
             return nickname, avatar_url
 
@@ -222,6 +229,7 @@ async def get_member(user_id):
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
 
+# Create leaderboard image without emoji handling
 async def create_leaderboard_image(top_users):
     WIDTH, HEIGHT = 1000, 600
     PADDING = 10
@@ -235,12 +243,6 @@ async def create_leaderboard_image(top_users):
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
 
-    emoji_font_url = "https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf"
-    response = requests.get(emoji_font_url)
-    font_data = BytesIO(response.content)
-    emoji_font = ImageFont.truetype(font_data, size=24)
-
-    # Render leaderboard
     y_position = PADDING
     for rank, (user_id, xp) in enumerate(top_users, 1):
         member = await get_member(user_id)
@@ -260,20 +262,16 @@ async def create_leaderboard_image(top_users):
 
         img.paste(img_pfp, (PADDING, y_position))
 
-        # Render nickname with appropriate font (handling emojis)
-        for char in nickname:
-            if is_emoji(char):
-                draw.text((PADDING + 60, y_position), char, font=emoji_font, fill="black")
-            else:
-                draw.text((PADDING + 60, y_position), char, font=font, fill="black")
-
+        # Render nickname and XP
+        draw.text((PADDING + 60, y_position), nickname, font=font, fill="black")
         draw.text((PADDING + 200, y_position), f"Points: {int(xp)}", font=font, fill="black")
         y_position += 60
 
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
-    return img_binarytasks
+    return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
