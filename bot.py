@@ -194,7 +194,6 @@ def fetch_top_users():
 
     return cursor.fetchall()
 
-
 async def get_user_data(user_id):
     retry_after = 0
     while retry_after == 0:
