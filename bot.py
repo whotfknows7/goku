@@ -273,11 +273,11 @@ async def create_leaderboard_image(top_users):
         rank_width = rank_bbox[2] - rank_bbox[0]
 
         # Draw rank in the center of the PFP and nickname area
-        x_position_rank = PADDING + 55  # Position the rank to the right of the PFP
+        x_position_rank = PADDING + 45  # Position the rank to the right of the PFP
         draw.text((x_position_rank, y_position), rank_text, font=font, fill="black")
 
         # Position nickname and separator '|'
-        x_position = x_position_rank + rank_width + 5  # Reduced padding after rank
+        x_position = x_position_rank + rank_width + 3  # Reduced padding after rank
         separator = " | "
         draw.text((x_position, y_position), separator, font=font, fill="black")
         
@@ -344,6 +344,11 @@ async def update_leaderboard():
         else:
             logger.error(f"HTTPException while updating leaderboard: {e}")
 
+    except asyncio.CancelledError:
+        logger.info("Leaderboard update task was cancelled gracefully.")
+        # Perform any necessary cleanup here if needed
+        raise  # Propagate the exception after logging it
+
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
 
@@ -400,7 +405,11 @@ async def announce_role_update(member, role_name):
         await channel.send(message)
 
 
-
+@bot.event
+async def on_close():
+    logger.info("Bot is shutting down. Cancelling tasks.")
+    update_leaderboard.cancel()
+    await bot.close()
 # Run bot with token
 
 bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI')  # Replace with
