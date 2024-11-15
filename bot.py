@@ -236,8 +236,10 @@ async def create_leaderboard_image(top_users):
     img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
-    # Font
-    font = ImageFont.load_default()
+    
+    # Path to the font you downloaded (e.g., Noto Sans or Noto Color Emoji)
+    font_path = ""  # Update this path
+    font = ImageFont.truetype(font_path, size=24)
 
     # Initial position for the leaderboard content
     y_position = PADDING
