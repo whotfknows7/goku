@@ -30,13 +30,10 @@ import asyncio
 
 import time
 
-from PIL import Image, ImageDraw, ImageFont
 
-import requests
-
+import aiohttp
 from io import BytesIO
-
-
+from PIL import Image, ImageDraw, ImageFont
 
 # Rollbar initialization
 
@@ -194,7 +191,31 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
 
     return cursor.fetchall()
+
+# Helper function to fetch font data (make sure to have aiohttp installed)
+async def fetch_font_data(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.read()
+
+async def fetch_avatar(avatar_url):
+    if avatar_url:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(avatar_url) as response:
+                    if response.status == 200:
+                        img_data = await response.read()
+                        img_pfp = Image.open(BytesIO(img_data))
+                        img_pfp = img_pfp.resize((50, 50))  # Resize avatar
+                        return img_pfp
+        except Exception as e:
+            logger.error(f"Failed to fetch avatar from {avatar_url}: {e}")
+            return Image.new('RGB', (50, 50), color='grey')  # Return a placeholder if there's an error
+    else:
+        return Image.new('RGB', (50, 50), color='grey')  # Return a placeholder if avatar_url is None
+
 async def get_member(user_id):
+
 
     retry_after = 0
 
@@ -230,65 +251,51 @@ async def get_member(user_id):
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
 async def create_leaderboard_image(top_users):
-    WIDTH, HEIGHT = 1000, 600  # Adjust width and height as needed
+    WIDTH, HEIGHT = 1000, 600
     PADDING = 20
-    COLUMN_WIDTH = 200  # Width of each column
-    NUM_COLUMNS = 5  # Number of columns (you can adjust this)
+    COLUMN_WIDTH = 200
+    NUM_COLUMNS = 5
 
     img = Image.new("RGB", (WIDTH, HEIGHT), color='white')
     draw = ImageDraw.Draw(img)
 
-    # Fetch fonts
+    # Fetch the regular font (no need for emoji font anymore)
     font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
-    response = requests.get(font_url)
-    font_data = BytesIO(response.content)
-    font = ImageFont.truetype(font_data, size=24)
+    font_data = await fetch_font_data(font_url)  # Fetch font data from URL
+    font = ImageFont.truetype(BytesIO(font_data), size=24)
 
-    emoji_font_url = "https://github.com/whotfknows7/idk-man/raw/refs/heads/main/NotoColorEmoji-Regular.ttf"
-    response = requests.get(emoji_font_url)
-    font_data = BytesIO(response.content)
-    emoji_font = ImageFont.truetype(font_data, size=24)
-
-    # Position the columns for the ranks
-    x_positions = [PADDING + (COLUMN_WIDTH * i) for i in range(NUM_COLUMNS)]  # List of column x positions
-    y_position = PADDING  # Start drawing from the top
+    x_positions = [PADDING + (COLUMN_WIDTH * i) for i in range(NUM_COLUMNS)]
+    y_position = PADDING
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
-        if rank > NUM_COLUMNS:  # Stop if we exceed the column limit
+        if rank > NUM_COLUMNS:
             break
 
-        # Fetch member data
         member = await get_member(user_id)
         if not member:
             continue
 
         nickname, avatar_url = member
 
-        # Fetch user profile picture
         try:
-            response = requests.get(avatar_url)
-            img_pfp = Image.open(BytesIO(response.content))
+            response = await aiohttp.ClientSession().get(avatar_url)
+            img_pfp = Image.open(BytesIO(await response.read()))
             img_pfp = img_pfp.resize((50, 50))
         except Exception as e:
             logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
             img_pfp = Image.new('RGB', (50, 50), color='grey')
 
-        # Create a new column for each rank
         col_x_position = x_positions[rank - 1]
-
-        # Paste the profile picture on the left side of each column
         img.paste(img_pfp, (col_x_position, y_position))
 
-        # Draw rank, nickname, and points in each column
         rank_text = f"#{rank}"
         draw.text((col_x_position + 60, y_position), rank_text, font=font, fill="black")
 
-        # Position the nickname
-        nickname_x_position = col_x_position + 60 + 50  # Position after the profile picture
+        nickname_x_position = col_x_position + 60 + 50
         for char in nickname:
-            if is_emoji(char):
-                draw.text((nickname_x_position, y_position), char, font=emoji_font, fill="black")
-                bbox = draw.textbbox((nickname_x_position, y_position), char, font=emoji_font)
+            if is_emoji(char):  # Check if the character is an emoji
+                draw.text((nickname_x_position, y_position), char, font=font, fill="black")  # Treat emoji as normal text
+                bbox = draw.textbbox((nickname_x_position, y_position), char, font=font)
                 char_width = bbox[2] - bbox[0]
                 nickname_x_position += char_width
             else:
@@ -297,15 +304,12 @@ async def create_leaderboard_image(top_users):
                 char_width = bbox[2] - bbox[0]
                 nickname_x_position += char_width
 
-        # Draw points
         points_text = f"PTS: {int(xp)}"
         draw.text((nickname_x_position + 5, y_position), points_text, font=font, fill="black")
 
-        # Move down to the next row
-        y_position += 100  # Adjust for more spacing between rows
+        y_position += 100
 
-    # Draw column separators
-    for x in x_positions[1:]:  # Skip the first column since it has no separator before it
+    for x in x_positions[1:]:
         draw.line([(x, PADDING), (x, HEIGHT - PADDING)], fill="black", width=2)
 
     img_binary = BytesIO()
