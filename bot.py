@@ -194,11 +194,6 @@ def fetch_top_users():
 
     return cursor.fetchall()
 
-async getMember(guild_id, user_id)
-    let
-    let member = guild.members.get(userID); // Accessing member by userID directly
-    return member;
-}
 
 async def get_user_data(user_id):
     retry_after = 0
