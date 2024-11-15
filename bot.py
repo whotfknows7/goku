@@ -193,6 +193,31 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
 
     return cursor.fetchall()
+async getMember(guildID, userID, cache = true) {
+    if (!userID) return;
+    let guild = guildID;
+    if (typeof guildID == 'string') guild = await this.getGuild(guildID, cache);
+    if (!guild) return;
+    userID = userID.match(/[0-9]+/);
+    if (!userID) return;
+    userID = userID[0];
+    let member = guild.members.get(userID);
+    if (member) {
+        member.status = member.user.presence?.status;
+    } else {
+        try {
+            member = await guild.getRESTMember(userID);
+        } catch (e) {
+            return;
+        }
+        if (!member.id) member.id = member.user.id;
+        if (!member.status) member.status = member.user.presence?.status;
+        if (member && cache) {
+            guild.members.add(member, guild, false);
+        }
+    }
+    return member;
+}
 
 async def get_user_data(user_id):
     retry_after = 0
