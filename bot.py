@@ -68,6 +68,7 @@ ROLE_LOG_CHANNEL_ID = 1251143629943345204
 
 LEADERBOARD_CHANNEL_ID = 1303672077068537916
 
+GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 
 
 # Define intents
@@ -196,7 +197,6 @@ def fetch_top_users():
 
 async def get_member(user_id):
     retry_after = 0
-    GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 
     while retry_after == 0:
         try:
@@ -209,7 +209,7 @@ async def get_member(user_id):
             # Fetch the member from the guild
             member = await bot.guild.fetch_member(user_id)
             # Get member nickname
-            nickname = member.nick if member.nick else member.name
+            nickname = member.nick if member.nick else member.display_name
             avatar_url = member.avatar_url if member.avatar_url else none
             return nickname, avatar_url
         
@@ -243,13 +243,24 @@ async def create_leaderboard_image(top_users):
     # Initial position for the leaderboard content
     y_position = PADDING
 
+    # Fetch the guild using bot.get_guild()
+    guild = bot.get_guild(GUILD_ID)  # Ensure this is the correct guild ID
+
+    if not guild:
+        logger.error(f"Guild with ID {GUILD_ID} not found")
+        return None
+
     # Loop through the top users to add their info to the image
     for rank, (user_id, xp) in enumerate(top_users, 1):
-        nickname, avatar_url = await bot.guild.fetch_member(user_id)  # Use display name here
+        member = guild.get_member(user_id)  # Use get_member to get the member from the guild
         
-        # Fallback to using "Unknown User" if no display name is found
-        if not nickname:
-            display_name = "Unknown User"
+        # If the member is not found, log an error and skip
+        if not member:
+            logger.error(f"Member with ID {user_id} not found in the guild.")
+            continue
+        
+        nickname = member.nick if member.nick else member.name
+        avatar_url = member.avatar_url if member.avatar_url else None
 
         # Fetch user profile picture and resize it for the image
         try:
