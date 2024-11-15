@@ -54,7 +54,7 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 # Placeholder for the leaderboard message
 leaderboard_message = None
 # Constants for image dimensions
-WIDTH, HEIGHT = 702, 600  # Set image size
+WIDTH, HEIGHT = 702, 605  # Set image size
 PADDING = 10  # Space from the edges of the image
 
 # Function to count custom emojis in a message
@@ -101,6 +101,19 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
 
+def round_pfp(img, size=(50, 57)):
+    """Create a rounded profile picture with a given size."""
+    # Create a circle mask
+    mask = Image.new('L', size, 0)  # 'L' is for grayscale image (1 channel)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((0, 0, size[0], size[1]), fill=255)  # Draw a filled circle
+    mask = mask.resize(img.size, Image.Resampling.LANCZOS)  # Use LANCZOS filter
+
+    # Apply the mask to the image to make the corners round
+    rounded_img = img.convert("RGBA")  # Convert to RGBA to handle transparency
+    rounded_img.putalpha(mask)  # Apply the mask as alpha (transparency)
+    return rounded_img
+
 async def get_member(user_id):
     retry_after = 0
     while retry_after == 0:
@@ -143,6 +156,7 @@ async def create_leaderboard_image(top_users):
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
         member = await get_member(user_id)
+
         if not member:
             continue
 
@@ -152,10 +166,11 @@ async def create_leaderboard_image(top_users):
         try:
             response = requests.get(avatar_url)
             img_pfp = Image.open(BytesIO(response.content))
-            img_pfp = img_pfp.resize((60, 60))
+            img_pfp = img_pfp.resize((50, 57))  # Resize PFP to 50x57
+            img_pfp = round_pfp(img_pfp)  # Apply rounded corners to the PFP
         except Exception as e:
             logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
-            img_pfp = Image.new('RGB', (60, 60), color='grey')
+            img_pfp = Image.new('RGBA', (50, 57), color=(128, 128, 128, 255))  # Default grey circle
 
         img.paste(img_pfp, (PADDING, y_position))
 
@@ -197,7 +212,9 @@ async def create_leaderboard_image(top_users):
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
+
     return img_binary
+
 
 
 @tasks.loop(seconds=20)
