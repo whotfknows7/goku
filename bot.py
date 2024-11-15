@@ -214,6 +214,47 @@ async def get_user_data(user_id):
             else:
                 return None, None  # In case of error, return None
 
+async def get_member(user_id):
+    retry_after = 0
+    GUILD_ID =   # Replace with your actual guild ID
+
+    while retry_after == 0:
+        try:
+            # Fetch the guild using the hardcoded GUILD_ID
+            guild = bot.get_guild(GUILD_ID)
+            if not guild:
+                logger.error(f"Guild with ID {GUILD_ID} not found")
+                return None
+
+            # Fetch the member from the guild
+            member = await guild.fetch_member(user_id)
+            
+            # Now you can explicitly get the member_id
+            member_id = member.id  # This is the member's ID (same as the user ID in this context)
+            logger.info(f"Member ID: {member_id}")
+
+            # You can also access other member details
+            # For example, the username:
+            member_username = member.name
+            logger.info(f"Member Username: {member_username}")
+            
+            return member
+        
+        except discord.HTTPException as e:
+            if e.status == 429:  # Rate-limited
+                retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
+                wait_time = retry_after - time.time()
+
+                if wait_time > 0:
+                    logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
+                    await asyncio.sleep(wait_time)
+                else:
+                    raise
+
+            else:
+                logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
+                return None
+
 async def create_leaderboard_image(top_users):
     # Image size and padding
     WIDTH, HEIGHT = 1000, 600
