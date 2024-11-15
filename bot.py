@@ -14,7 +14,7 @@ from db_server import (
 )
 import asyncio
 import time
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
 from io import BytesIO
 
@@ -53,8 +53,9 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 
 # Placeholder for the leaderboard message
 leaderboard_message = None
+
 # Constants for image dimensions
-WIDTH, HEIGHT = 702, 605  # Set image size
+WIDTH, HEIGHT = 702, 610  # Set image size
 PADDING = 10  # Space from the edges of the image
 
 # Function to count custom emojis in a message
@@ -101,19 +102,24 @@ def fetch_top_users():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
 
-def round_pfp(img, size=(50, 57)):
-    """Create a rounded profile picture with a given size."""
-    # Create a circle mask
-    mask = Image.new('L', size, 0)  # 'L' is for grayscale image (1 channel)
+# Function to create a rounded mask for profile pictures
+def create_rounded_mask(size, radius=15):
+    mask = Image.new('L', size, 0)  # 'L' mode creates a grayscale image
     draw = ImageDraw.Draw(mask)
-    draw.ellipse((0, 0, size[0], size[1]), fill=255)  # Draw a filled circle
-    mask = mask.resize(img.size, Image.Resampling.LANCZOS)  # Use LANCZOS filter
+    # Draw a rounded rectangle (or ellipse) on the mask
+    draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)  # Adjust the radius as needed
+    return mask
 
-    # Apply the mask to the image to make the corners round
-    rounded_img = img.convert("RGBA")  # Convert to RGBA to handle transparency
-    rounded_img.putalpha(mask)  # Apply the mask as alpha (transparency)
-    return rounded_img
+# Function to round the corners of a profile picture
+def round_pfp(img_pfp):
+    # Create a rounded mask with the size of the image
+    mask = create_rounded_mask(img_pfp.size)
+    # Convert the image to 'RGBA' mode to support alpha (transparency)
+    img_pfp = img_pfp.convert('RGBA')
+    img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
+    return img_pfp
 
+# Function to get a member's nickname and avatar
 async def get_member(user_id):
     retry_after = 0
     while retry_after == 0:
@@ -126,7 +132,6 @@ async def get_member(user_id):
             member = await guild.fetch_member(user_id)
             nickname = member.nick if member.nick else member.name
             avatar_url = member.avatar_url if member.avatar_url else None
-
             return nickname, avatar_url
 
         except discord.HTTPException as e:
@@ -142,6 +147,7 @@ async def get_member(user_id):
                 logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
                 return None
 
+# Function to create the leaderboard image
 async def create_leaderboard_image(top_users):
     img = Image.new("RGB", (WIDTH, HEIGHT), color="white")
     draw = ImageDraw.Draw(img)
@@ -153,7 +159,6 @@ async def create_leaderboard_image(top_users):
     font = ImageFont.truetype(font_data, size=24)
 
     y_position = PADDING
-
     for rank, (user_id, xp) in enumerate(top_users, 1):
         member = await get_member(user_id)
 
@@ -172,7 +177,8 @@ async def create_leaderboard_image(top_users):
             logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
             img_pfp = Image.new('RGBA', (50, 57), color=(128, 128, 128, 255))  # Default grey circle
 
-        img.paste(img_pfp, (PADDING, y_position))
+        # Paste the profile picture with rounded corners onto the leaderboard
+        img.paste(img_pfp, (PADDING, y_position), img_pfp)  # The third argument is the alpha mask
 
         # Render rank
         rank_text = f"#{rank}"
@@ -186,7 +192,7 @@ async def create_leaderboard_image(top_users):
         separator_position = PADDING + 60 + rank_width + 5  # Position after rank text
         draw.text((separator_position, y_position), "|", font=font, fill="black")
 
-        # Render nickname
+        # Render the nickname
         nickname_position = separator_position + 20  # Shift nickname position to the right of the "|"
         draw.text((nickname_position, y_position), nickname, font=font, fill="black")
 
@@ -217,42 +223,6 @@ async def create_leaderboard_image(top_users):
 
 
 
-@tasks.loop(seconds=20)
-async def update_leaderboard():
-    try:
-        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-
-        if not channel:
-            logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
-            return
-
-        # Fetch the leaderboard data
-        top_users = fetch_top_users()
-
-        # Generate the leaderboard image
-        image = await create_leaderboard_image(top_users)
-
-        # Ensure image is passed as a file, not trying to log or serialize the object
-        global leaderboard_message
-
-        if leaderboard_message:
-            # Delete the previous message if it exists
-            await leaderboard_message.delete()
-
-        # Send the new leaderboard message from scratch
-        leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
-
-    except discord.HTTPException as e:
-        if e.status == 429:
-            retry_after = int(e.retry_after)
-            logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
-            await asyncio.sleep(retry_after)
-        else:
-            logger.error(f"HTTPException while updating leaderboard: {e}")
-
-    except Exception as e:
-        logger.error(f"Unexpected error in update_leaderboard: {e}")
-# Role update handling
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
