@@ -216,7 +216,7 @@ async def get_user_data(user_id):
 
 async def get_member(user_id):
     retry_after = 0
-    GUILD_ID =   # Replace with your actual guild ID
+    GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 
     while retry_after == 0:
         try:
@@ -228,16 +228,9 @@ async def get_member(user_id):
 
             # Fetch the member from the guild
             member = await guild.fetch_member(user_id)
-            
-            # Now you can explicitly get the member_id
+                    # Now you can explicitly get the member_id
             member_id = member.id  # This is the member's ID (same as the user ID in this context)
-            logger.info(f"Member ID: {member_id}")
-
-            # You can also access other member details
-            # For example, the username:
-            member_username = member.name
-            logger.info(f"Member Username: {member_username}")
-            
+            logger.info(f"Member ID: {member_id}")            
             return member
         
         except discord.HTTPException as e:
