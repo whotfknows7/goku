@@ -238,8 +238,10 @@ async def create_leaderboard_image(top_users):
 
     
     # Path to the font you downloaded (e.g., Noto Sans or Noto Color Emoji)
-    font_url = ""  # Update this path
+    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"  # Update this path
     font = ImageFont.truetype(font_path, size=24)
+    emoji_font_path = "emoji_font_url = "https://example.com/path/to/emoji-font.ttf"  # Replace with actual emoji font URL
+    emoji_font = ImageFont.truetype(emoji_font_path, size=24)
 
     # Initial position for the leaderboard content
     y_position = PADDING
