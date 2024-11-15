@@ -195,16 +195,9 @@ def fetch_top_users():
     return cursor.fetchall()
 
 async def get_user_data(guildID, user_id):
-    if (!userID) return;
-    let guild = guildID;
-    if (typeof guildID == 'string') guild = await this.getGuild(guildID);
-
-    
-    
-    
-    
-    
-    retry_after = 0    
+   if (!userID) return;
+   let guild = guildID;
+    retry_after = 0
     while retry_after == 0:
         try:
             user = await bot.fetch_user(user_id)
