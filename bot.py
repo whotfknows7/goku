@@ -228,11 +228,9 @@ async def get_member(user_id):
 
             # Fetch the member from the guild
             member = await guild.fetch_member(user_id)
-                    # Now you can explicitly get the member_id
-            member_id = member.id  # This is the member's ID (same as the user ID in this context)
-            logger.info(f"Member ID: {member_id}")            
-            member
-            return member
+            # Get member nickname
+            nickname = member.nick if member.nick else member.name
+            return nickname
         
         except discord.HTTPException as e:
             if e.status == 429:  # Rate-limited
