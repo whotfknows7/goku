@@ -247,7 +247,6 @@ async def create_leaderboard_image(top_users):
     font_data = BytesIO(response.content)
     emoji_font = ImageFont.truetype(font_data, size=24)
 
-    # Render leaderboard
     y_position = PADDING
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
@@ -272,16 +271,19 @@ async def create_leaderboard_image(top_users):
         rank_text = f"#{rank}"
         rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
         rank_width = rank_bbox[2] - rank_bbox[0]
-        x_position_rank = PADDING + 55  # Position the rank to the right of the PFP
 
         # Draw rank in the center of the PFP and nickname area
+        x_position_rank = PADDING + 55  # Position the rank to the right of the PFP
         draw.text((x_position_rank, y_position), rank_text, font=font, fill="black")
 
         # Position nickname and separator '|'
-        x_position = x_position_rank + rank_width + 10  # Add a little padding after rank
+        x_position = x_position_rank + rank_width + 5  # Reduced padding after rank
         separator = " | "
         draw.text((x_position, y_position), separator, font=font, fill="black")
-        x_position += draw.textbbox((x_position, y_position), separator, font=font)[2] - draw.textbbox((x_position, y_position), separator, font=font)[0]  # Move x_position after separator
+        
+        # Move x_position after separator
+        separator_width = draw.textbbox((x_position, y_position), separator, font=font)[2] - draw.textbbox((x_position, y_position), separator, font=font)[0]
+        x_position += separator_width
 
         # Render nickname (handling emojis)
         for char in nickname:
@@ -297,8 +299,9 @@ async def create_leaderboard_image(top_users):
                 x_position += char_width
 
         # Position and render the points
-        x_position += 10  # Extra padding for the points
-        draw.text((x_position, y_position), f"Points: {int(xp)}", font=font, fill="black")
+        x_position += 5  # Reduced extra padding for the points
+        points_text = f" | PTS: {int(xp)}"
+        draw.text((x_position, y_position), points_text, font=font, fill="black")
 
         y_position += 60  # Move to next row for the next user
 
