@@ -154,39 +154,20 @@ async def create_leaderboard_image(top_users):
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
 
-    # Rank-specific background colors
+    # Rank-specific background colors (updated)
     rank_colors = {
         1: "#FFD700",  # Gold for Rank 1
         2: "#C0C0C0",  # Silver for Rank 2
         3: "#CD7F32",  # Bronze for Rank 3
-        4: "#8B008B",  # Dark Magenta for Rank 4
-        5: "#00BFFF",  # Deep Sky Blue for Rank 5
-        6: "#BDB76B",  # Dark Khaki for Rank 6
-        7: "#4682B4",  # Steel Blue for Rank 7
-        8: "#708090",  # Slate Gray for Rank 8
-        9: "#66CDAA",  # Medium Aquamarine for Rank 9
-        10: "#696969", # Dim Gray for Rank 10
+        4: "#DC143C",  # Crimson for Rank 4 (updated)
+        5: "#00CED1",  # Dark Turquoise for Rank 5 (updated)
+        6: "#7FFF00",  # Chartreuse for Rank 6 (updated)
+        7: "#9B0063",  # Slightly less Dark Magenta for Rank 7 (updated)
+        8: "#BDB76B",  # Dark Khaki for Rank 8
+        9: "#B0C4DE",  # Light Steel Blue for Rank 9
+        10: "#708090",  # Slate Gray for Rank 10
     }
 
-    # Rank-specific number colors (second colors for each rank)
-    rank_number_colors = {
-        1: "#DC143C",  # Crimson for Rank 1
-        2: "#FF8C00",  # Dark Orange for Rank 2
-        3: "#DA70D6",  # Orchid for Rank 3
-        4: "#7FFF00",  # Chartreuse for Rank 4
-        5: "#FF6347",  # Tomato for Rank 5
-        6: "#20B2AA",  # Light Sea Green for Rank 6
-        7: "#CD853F",  # Peru for Rank 7
-        8: "#00CED1",  # Dark Turquoise for Rank 8
-        9: "#DAA520",  # Golden Rod for Rank 9
-        10: "#B0C4DE", # Light Steel Blue for Rank 10
-    }
-
-    # Set a larger font size for rank numbers (adjusted size)
-    rank_number_font_size = 40  # Larger size for rank numbers
-    rank_number_font = ImageFont.truetype(font_data, size=rank_number_font_size)
-
-    # Set standard font size for the rest of the text
     y_position = PADDING
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
@@ -217,13 +198,12 @@ async def create_leaderboard_image(top_users):
 
         # Calculate the Y-position for the rank text (centered vertically relative to PFP)
         rank_text = f"#{rank}"
-        rank_bbox = draw.textbbox((0, 0), rank_text, font=rank_number_font)
+        rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
         rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
         rank_y_position = y_position + (57 - rank_height) // 2 - 5  # Centered with 5px upward offset
 
-        # Render rank number with its specific color (using the larger font size)
-        rank_number_color = rank_number_colors.get(rank, "#FFFFFF")  # Default to white if not listed
-        draw.text((PADDING + 65, rank_y_position), rank_text, font=rank_number_font, fill=rank_number_color)
+        # Render rank with adjusted vertical alignment (centered with PFP)
+        draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="black")
 
         # Calculate the width of the rank text to position the "|" right after it
         rank_width = rank_bbox[2] - rank_bbox[0]  # Width of rank text
@@ -268,6 +248,7 @@ async def create_leaderboard_image(top_users):
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
 
+  
     return img_binary
 
 @tasks.loop(seconds=20)
