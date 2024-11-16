@@ -146,7 +146,7 @@ async def get_member(user_id):
                 return None
 
 async def create_leaderboard_image(top_users):
-    img = Image.new("RGBA", (WIDTH, HEIGHT), color="#313338")  # Set background color to #313338
+    img = Image.new("RGBA", (WIDTH, HEIGHT), color= (0,0, 0))  # Set background color to #313338
     draw = ImageDraw.Draw(img)
 
     # Fetch fonts
@@ -158,15 +158,8 @@ async def create_leaderboard_image(top_users):
     # Rank-specific background colors (updated)
     rank_colors = {
         1: "#FFD700",  # Gold for Rank 1
-        2: "#C0C0C0",  # Silver for Rank 2
+        2: "#E6E8FA",  # Silver for Rank 2
         3: "#CD7F32",  # Bronze for Rank 3
-        4: "#ff3d3d",  # Crimson for Rank 4 (updated)
-        5: "#00CED1",  # Dark Turquoise for Rank 5 (updated)
-        6: "#7FFF00",  # Chartreuse for Rank 6 (updated)
-        7: "#ff58ff",  # Slightly less Dark Magenta for Rank 7 (updated)
-        8: "#BDB76B",  # Dark Khaki for Rank 8
-        9: "#B0C4DE",  # Light Steel Blue for Rank 9
-        10: "#708090",  # Slate Gray for Rank 10
     }
 
     y_position = PADDING
@@ -180,7 +173,7 @@ async def create_leaderboard_image(top_users):
         nickname, avatar_url = member
 
         # Set background color based on rank
-        rank_bg_color = rank_colors.get(rank, "#FFFFFF")  # Default to white if rank isn't listed
+        rank_bg_color = rank_colors.get(rank, "")  # Default to white if rank isn't listed
 
         # Draw the background rounded rectangle for the rank
         draw.rounded_rectangle(
