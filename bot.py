@@ -182,9 +182,12 @@ async def create_leaderboard_image(top_users):
         # Set background color based on rank
         rank_bg_color = rank_colors.get(rank, "#FFFFFF")  # Default to white if rank isn't listed
 
-        # Draw the background rectangle for the rank
-        draw.rectangle([(PADDING, y_position), (WIDTH - PADDING, y_position + 57)], fill=rank_bg_color)
-
+        # Draw the background rounded rectangle for the rank
+        draw.rounded_rectangle(
+        [(PADDING, y_position), (WIDTH - PADDING, y_position + 57)],
+        radius=10,  # Adjust radius for corner rounding
+        fill=rank_bg_color
+        )
         # Fetch user profile picture
         try:
             response = requests.get(avatar_url)
