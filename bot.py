@@ -196,24 +196,36 @@ async def create_leaderboard_image(top_users):
 
         img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-        # Render rank with adjusted padding (closer to PFP)
+        # Calculate the Y-position for the rank text (centered vertically relative to PFP)
         rank_text = f"#{rank}"
-        draw.text((PADDING + 65, y_position), rank_text, font=font, fill="black")  # Adjusted X position closer to PFP
+        rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
+        rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
+        rank_y_position = y_position + (57 - rank_height) // 2 - 5  # Centered with 5px upward offset
+
+        # Render rank with adjusted vertical alignment (centered with PFP)
+        draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="black")
 
         # Calculate the width of the rank text to position the "|" right after it
-        rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
         rank_width = rank_bbox[2] - rank_bbox[0]  # Width of rank text
+
+        # Calculate Y-position for the separator "|" (aligned with rank text)
+        separator_y_position = rank_y_position  # Keep separator aligned with rank text
 
         # Render the separator "|"
         separator_position = PADDING + 65 + rank_width + 5  # Adjusted position for separator
-        draw.text((separator_position, y_position), "|", font=font, fill="black")
+        draw.text((separator_position, separator_y_position), "|", font=font, fill="black")
 
-        # Render nickname
+        # Calculate the Y-position for the nickname text (centered vertically relative to PFP)
+        nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
+        nickname_height = nickname_bbox[3] - nickname_bbox[1]
+        nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
+        draw.text((separator_position, nickname_y_position), "|", font=font, fill="black")
+
+        # Render nickname with vertical alignment
         nickname_position = separator_position + 20  # Shift nickname position to the right of the "|"
-        draw.text((nickname_position, y_position), nickname, font=font, fill="black")
+        draw.text((nickname_position, nickname_y_position), nickname, font=font, fill="black")
 
         # Fetch the width of the nickname text
-        nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
         nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Calculate width from bbox
 
         # Render points (XP) with "|" separator
@@ -223,11 +235,12 @@ async def create_leaderboard_image(top_users):
 
         # Render the "|" separator before XP
         points_separator_position = nickname_position + nickname_width + 10  # Position after nickname
-        draw.text((points_separator_position, y_position), "|", font=font, fill="black")
+        points_y_position = y_position + (57 - (points_bbox[3] - points_bbox[1])) // 2 - 5  # Centered with 5px upward offset
+        draw.text((points_separator_position, points_y_position), "|", font=font, fill="black")
 
-        # Render XP points next to the separator
+        # Render XP points with vertical alignment
         points_position = points_separator_position + 20  # Space between "|" and points text
-        draw.text((points_position, y_position), points_text, font=font, fill="black")
+        draw.text((points_position, points_y_position), points_text, font=font, fill="black")
 
         y_position += 60  # Space for next row of text
 
@@ -237,8 +250,6 @@ async def create_leaderboard_image(top_users):
 
     return img_binary
 
-
-    return img_binary
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
