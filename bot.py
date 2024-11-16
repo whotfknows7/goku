@@ -145,7 +145,7 @@ async def get_member(user_id):
                 return None
 
 async def create_leaderboard_image(top_users):
-    img = Image.new("RGBA", (WIDTH, HEIGHT), color="white")
+    img = Image.new("RGBA", (WIDTH, HEIGHT), color="#313338")  # Set background color to #313338
     draw = ImageDraw.Draw(img)
 
     # Fetch fonts
