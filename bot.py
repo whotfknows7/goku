@@ -159,10 +159,10 @@ async def create_leaderboard_image(top_users):
         1: "#FFD700",  # Gold for Rank 1
         2: "#C0C0C0",  # Silver for Rank 2
         3: "#CD7F32",  # Bronze for Rank 3
-        4: "#DC143C",  # Crimson for Rank 4 (updated)
+        4: "#ff3d3d",  # Crimson for Rank 4 (updated)
         5: "#00CED1",  # Dark Turquoise for Rank 5 (updated)
         6: "#7FFF00",  # Chartreuse for Rank 6 (updated)
-        7: "#9B0063",  # Slightly less Dark Magenta for Rank 7 (updated)
+        7: "#ff58ff",  # Slightly less Dark Magenta for Rank 7 (updated)
         8: "#BDB76B",  # Dark Khaki for Rank 8
         9: "#B0C4DE",  # Light Steel Blue for Rank 9
         10: "#708090",  # Slate Gray for Rank 10
