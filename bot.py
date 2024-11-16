@@ -154,6 +154,20 @@ async def create_leaderboard_image(top_users):
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
 
+    # Rank-specific background colors (using only the first color from each pair)
+    rank_colors = {
+        1: "#FFD700",  # Gold for Rank 1
+        2: "#C0C0C0",  # Silver for Rank 2
+        3: "#CD7F32",  # Bronze for Rank 3
+        4: "#8B008B",  # DarkMagenta for Rank 4
+        5: "#00BFFF",  # DeepSkyBlue for Rank 5
+        6: "#BDB76B",  # DarkKhaki for Rank 6
+        7: "#4682B4",  # SteelBlue for Rank 7
+        8: "#708090",  # SlateGray for Rank 8
+        9: "#66CDAA",  # MediumAquamarine for Rank 9
+        10: "#696969",  # DimGray for Rank 10
+    }
+
     y_position = PADDING
 
     for rank, (user_id, xp) in enumerate(top_users, 1):
@@ -163,6 +177,12 @@ async def create_leaderboard_image(top_users):
             continue
 
         nickname, avatar_url = member
+
+        # Set background color based on rank
+        rank_bg_color = rank_colors.get(rank, "#FFFFFF")  # Default to white if rank isn't listed
+
+        # Draw the background rectangle for the rank
+        draw.rectangle([(PADDING, y_position), (WIDTH - PADDING, y_position + 57)], fill=rank_bg_color)
 
         # Fetch user profile picture
         try:
@@ -214,6 +234,9 @@ async def create_leaderboard_image(top_users):
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
+
+    return img_binary
+
 
     return img_binary
 @tasks.loop(seconds=20)
