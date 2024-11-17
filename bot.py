@@ -160,7 +160,7 @@ async def create_leaderboard_image(top_users):
     draw = ImageDraw.Draw(img)
 
     # Fetch fonts
-    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/Rubik-VariableFont_wght.ttf"
+    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
     response = requests.get(font_url)
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
@@ -187,7 +187,7 @@ async def create_leaderboard_image(top_users):
             nickname, avatar_url = member
 
             # Set background color based on rank
-            rank_bg_color = rank_colors.get(rank, "#99AAb5")  # Default to light grey if rank isn't listed
+            rank_bg_color = rank_colors.get(rank, "#F8F8F8")  # Default to light grey if rank isn't listed
 
             # Draw the rounded rectangle for the rank
             draw.rounded_rectangle(
@@ -214,8 +214,8 @@ async def create_leaderboard_image(top_users):
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 5  # Centered with 5px upward offset
 
-            # Render rank with adjusted vertical alignment (centered with PFP)
-            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white")
+            # Render rank with adjusted vertical alignment (centered with PFP) and outline
+            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Calculate the width of the rank text to position the "|" right after it
             rank_width = rank_bbox[2] - rank_bbox[0]  # Width of rank text
@@ -233,9 +233,9 @@ async def create_leaderboard_image(top_users):
             nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
             draw.text((separator_position, nickname_y_position), "|", font=font, fill="white")
 
-            # Render nickname with vertical alignment
+            # Render nickname with vertical alignment and outline
             nickname_position = separator_position + 20  # Shift nickname position to the right of the "|"
-            draw.text((nickname_position, nickname_y_position), nickname, font=font, fill="white")
+            draw.text((nickname_position, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Fetch the width of the nickname text
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Calculate width from bbox
@@ -250,9 +250,9 @@ async def create_leaderboard_image(top_users):
             points_y_position = y_position + (57 - (points_bbox[3] - points_bbox[1])) // 2 - 5  # Centered with 5px upward offset
             draw.text((points_separator_position, points_y_position), "|", font=font, fill="white")
 
-            # Render XP points with vertical alignment
+            # Render XP points with vertical alignment and outline
             points_position = points_separator_position + 20  # Space between "|" and points text
-            draw.text((points_position, points_y_position), points_text, font=font, fill="white")
+            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             y_position += 60  # Space for next row of text
 
