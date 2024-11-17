@@ -59,6 +59,16 @@ leaderboard_message = None
 WIDTH, HEIGHT = 702, 610  # Set image size
 PADDING = 10  # Space from the edges of the image
 
+font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/TT%20Fors%20Trial%20Bold.ttf?v=1731866074399"
+
+response = requests.get(font_url)
+if response.status_code == 200:
+    with open("TT Fors Trial Bold.ttf", "wb") as f:
+        f.write(response.content)
+    print("Font downloaded successfully.")
+else:
+    print("Failed to download font.")
+
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -136,15 +146,12 @@ async def get_member(user_id):
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
 
-async def create_leaderboard_image():
+async def create_leaderboard_image(font_url):
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
 
-    # Fetch fonts
-    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
-    response = requests.get(font_url)
-    font_data = BytesIO(response.content)
-    font = ImageFont.truetype(font_data, size=24)
+    # Load the font file
+    font = ImageFont.truetype(font_url)
 
     # Rank-specific background colors
     rank_colors = {
