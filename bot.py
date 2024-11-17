@@ -97,12 +97,6 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-# Fetch top users for leaderboard
-def fetch_top_users():
-    from db_server import cursor
-    cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
-    return cursor.fetchall()
-
 # Function to create a rounded mask for profile pictures
 def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less rounding
     mask = Image.new('L', size, 0)  # 'L' mode creates a grayscale image
@@ -118,44 +112,31 @@ def round_pfp(img_pfp):
     mask = create_rounded_mask(img_pfp.size)
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
+async def fetch_top_users_with_xp():
+    from db_server import cursor
+    cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
+    return cursor.fetchall()
+
 async def get_member(user_id):
-    retry_after = 0
-    while retry_after == 0:
-        try:
-            guild = bot.get_guild(GUILD_ID)
-            if not guild:
-                logger.error(f"Guild with ID {GUILD_ID} not found")
-                return None
-
-            member = await guild.fetch_member(user_id)
-            nickname = member.nick if member.nick else member.name
-            avatar_url = member.avatar_url if member.avatar_url else None
-            return nickname, avatar_url
-
-        except discord.HTTPException as e:
-            if e.status == 429:  # Rate-limited
-                retry_after = float(e.response.headers.get('X-RateLimit-Reset', time.time()))
-                wait_time = retry_after - time.time()
-                if wait_time > 0:
-                    logger.warning(f"Rate-limited. Retrying after {wait_time:.2f} seconds.")
-                    await asyncio.sleep(wait_time)
-                else:
-                    raise
-            elif e.status == 404:  # Member not found
-                logger.error(f"Member {user_id} not found in guild {GUILD_ID}: {e}")
-                return None  # Return None if member not found
-            else:
-                logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
-                return None
-
-        except discord.NotFound:
-            logger.error(f"Member {user_id} not found in guild {GUILD_ID}")
+    try:
+        guild = bot.get_guild(GUILD_ID)
+        if not guild:
+            logger.error(f"Guild with ID {GUILD_ID} not found")
             return None
 
-        except Exception as e:
-            logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
-            return None
-async def create_leaderboard_image(top_users):
+        member = await guild.fetch_member(user_id)
+        nickname = member.nick if member.nick else member.name
+        avatar_url = member.avatar_url if member.avatar_url else None
+        return nickname, avatar_url
+
+    except discord.HTTPException as e:
+        logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
+        return None
+
+async def create_leaderboard_image():
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
 
@@ -174,11 +155,13 @@ async def create_leaderboard_image(top_users):
 
     y_position = PADDING
 
+    top_users = await fetch_top_users_with_xp()
+
     if not top_users:
         # If no users fetched, display a message
         draw.text((PADDING, PADDING), "No users found", font=font, fill="white")
     else:
-        for rank, (user_id, xp) in enumerate(top_users[:10], 1):
+        for rank, (user_id, xp) in enumerate(top_users, 1):
             member = await get_member(user_id)
 
             if not member:
@@ -273,7 +256,6 @@ async def create_leaderboard_image(top_users):
     img_binary.seek(0)
 
     return img_binary
-
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
