@@ -160,7 +160,7 @@ async def create_leaderboard_image(top_users):
     draw = ImageDraw.Draw(img)
 
     # Fetch fonts
-    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
+    font_url = "https://github.com/whotfknows7/bold-bete/raw/refs/heads/main/Rubik-Bold.ttf"
     response = requests.get(font_url)
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
