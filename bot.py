@@ -146,12 +146,17 @@ async def get_member(user_id):
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
 
-async def create_leaderboard_image(font_url):
+async def create_leaderboard_image():
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
 
-    # Load the font file
-    font = ImageFont.truetype(font_url)
+    # Load the downloaded font
+    font_path = "TT Fors Trial Bold.ttf"
+    try:
+        font = ImageFont.truetype(font_path, size=24)
+    except IOError:
+        logger.error(f"Failed to load font file {font_path}")
+        return None
 
     # Rank-specific background colors
     rank_colors = {
@@ -222,7 +227,7 @@ async def create_leaderboard_image(font_url):
             separator_position = PADDING + 65 + rank_width + 5
             separator_bbox = draw.textbbox((0, 0), separator_text, font=font)
 
-            # Draw outline first
+            # Draw outline first for the separator
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((separator_position + x_offset, separator_y_position + y_offset),
@@ -237,7 +242,7 @@ async def create_leaderboard_image(font_url):
             nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
 
             # Render nickname with vertical alignment and outline
-            nickname_position = separator_position + 20  # Shift nickname position to the right of the "|"
+            nickname_position = separator_position + separator_bbox[2] - separator_bbox[0] + 20  # Shift nickname position to the right of the "|"
             draw.text((nickname_position, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Fetch the width of the nickname text
@@ -253,7 +258,7 @@ async def create_leaderboard_image(font_url):
             draw.text((points_separator_position, separator_y_position), "|", font=font, fill="white")
 
             # Render XP points with vertical alignment and outline
-            points_position = points_separator_position + 20  # Space between "|" and points text
+            points_position = points_separator_position + separator_bbox[2] - separator_bbox[0] + 20  # Space between "|" and points text
             draw.text((points_position, nickname_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             y_position += 60  # Space for next row of text
