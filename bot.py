@@ -187,7 +187,7 @@ async def create_leaderboard_image(top_users):
             nickname, avatar_url = member
 
             # Set background color based on rank
-            rank_bg_color = rank_colors.get(rank, "#F8F8F8")  # Default to light grey if rank isn't listed
+            rank_bg_color = rank_colors.get(rank, "#99AAb5")  # Default to light grey if rank isn't listed
 
             # Draw the rounded rectangle for the rank
             draw.rounded_rectangle(
