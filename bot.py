@@ -160,7 +160,7 @@ async def create_leaderboard_image(top_users):
     draw = ImageDraw.Draw(img)
 
     # Fetch fonts
-    font_url = "https://github.com/whotfknows7/bold-bete/raw/refs/heads/main/Rubik-Bold.ttf"
+    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
     response = requests.get(font_url)
     font_data = BytesIO(response.content)
     font = ImageFont.truetype(font_data, size=24)
@@ -223,15 +223,28 @@ async def create_leaderboard_image(top_users):
             # Calculate Y-position for the separator "|" (aligned with rank text)
             separator_y_position = rank_y_position  # Keep separator aligned with rank text
 
-            # Render the separator "|"
-            separator_position = PADDING + 65 + rank_width + 5  # Adjusted position for separator
-            draw.text((separator_position, separator_y_position), "|", font=font, fill="white")
+            # Render the "|" separator with outline
+            separator_text = "|"
+            outline_color = "black"
+            outline_width = 1
+
+            # Calculate separator position and text size
+            separator_position = PADDING + 65 + rank_width + 5
+            separator_bbox = draw.textbbox((0, 0), separator_text, font=font)
+
+            # Draw outline first
+            for x_offset in range(-outline_width, outline_width + 1):
+                for y_offset in range(-outline_width, outline_width + 1):
+                    draw.text((separator_position + x_offset, separator_y_position + y_offset),
+                              separator_text, font=font, fill=outline_color)
+
+            # Then draw the separator text
+            draw.text((separator_position, separator_y_position), separator_text, font=font, fill="white")
 
             # Calculate the Y-position for the nickname text (centered vertically relative to PFP)
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_height = nickname_bbox[3] - nickname_bbox[1]
             nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
-            draw.text((separator_position, nickname_y_position), "|", font=font, fill="white")
 
             # Render nickname with vertical alignment and outline
             nickname_position = separator_position + 20  # Shift nickname position to the right of the "|"
@@ -245,14 +258,13 @@ async def create_leaderboard_image(top_users):
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
             points_width = points_bbox[2] - points_bbox[0]  # Calculate width from bbox
 
-            # Render the "|" separator before XP
+            # Render the "|" separator before XP with outline
             points_separator_position = nickname_position + nickname_width + 10  # Position after nickname
-            points_y_position = y_position + (57 - (points_bbox[3] - points_bbox[1])) // 2 - 5  # Centered with 5px upward offset
-            draw.text((points_separator_position, points_y_position), "|", font=font, fill="white")
+            draw.text((points_separator_position, separator_y_position), "|", font=font, fill="white")
 
             # Render XP points with vertical alignment and outline
             points_position = points_separator_position + 20  # Space between "|" and points text
-            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
+            draw.text((points_position, nickname_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             y_position += 60  # Space for next row of text
 
@@ -261,7 +273,6 @@ async def create_leaderboard_image(top_users):
     img_binary.seek(0)
 
     return img_binary
-
 
 @tasks.loop(seconds=20)
 async def update_leaderboard():
