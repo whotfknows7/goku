@@ -203,7 +203,7 @@ async def create_leaderboard_image():
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-            # Calculate the Y-position for the rank text (centered vertically relative to PFP)
+                        # Calculate the Y-position for the rank text (centered vertically relative to PFP)
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
@@ -227,7 +227,7 @@ async def create_leaderboard_image():
             separator_position = PADDING + 65 + rank_width + 5
             separator_bbox = draw.textbbox((0, 0), separator_text, font=font)
 
-            # Draw outline first for the separator
+            # Draw outline first
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((separator_position + x_offset, separator_y_position + y_offset),
@@ -242,7 +242,7 @@ async def create_leaderboard_image():
             nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
 
             # Render nickname with vertical alignment and outline
-            nickname_position = separator_position + separator_bbox[2] - separator_bbox[0] + 20  # Shift nickname position to the right of the "|"
+            nickname_position = separator_position + 20  # Shift nickname position to the right of the "|"
             draw.text((nickname_position, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Fetch the width of the nickname text
@@ -258,17 +258,15 @@ async def create_leaderboard_image():
             draw.text((points_separator_position, separator_y_position), "|", font=font, fill="white")
 
             # Render XP points with vertical alignment and outline
-            points_position = points_separator_position + separator_bbox[2] - separator_bbox[0] + 20  # Space between "|" and points text
+            points_position = points_separator_position + 20  # Space between "|" and points text
             draw.text((points_position, nickname_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             y_position += 60  # Space for next row of text
-
-    img_binary = BytesIO()
-    img.save(img_binary, format="PNG")
-    img_binary.seek(0)
+            img_binary = BytesIO()
+            img.save(img_binary, format="PNG")
+            img_binary.seek(0)
 
     return img_binary
-
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
