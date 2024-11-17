@@ -150,13 +150,16 @@ async def create_leaderboard_image():
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
 
-    # Load the downloaded font
-    font_path = "TT Fors Trial Bold.ttf"
-    try:
-        font = ImageFont.truetype(font_path, size=24)
-    except IOError:
-        logger.error(f"Failed to load font file {font_path}")
-        return None
+    # Fetch fonts
+    font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/TT%20Fors%20Trial%20Bold.ttf?v=1731866074399"
+    response = requests.get(font_url)
+    if response.status_code == 200:
+        with open("TT Fors Trial Bold.ttf", "wb") as f:
+            f.write(response.content)
+        font = ImageFont.truetype("TT Fors Trial Bold.ttf", size=24)
+    else:
+        logger.error("Failed to download font. Using default font instead.")
+        font = ImageFont.load_default()  # Fallback to default font
 
     # Rank-specific background colors
     rank_colors = {
@@ -203,7 +206,7 @@ async def create_leaderboard_image():
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-                        # Calculate the Y-position for the rank text (centered vertically relative to PFP)
+            # Calculate the Y-position for the rank text (centered vertically relative to PFP)
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
@@ -215,26 +218,26 @@ async def create_leaderboard_image():
             # Calculate the width of the rank text to position the "|" right after it
             rank_width = rank_bbox[2] - rank_bbox[0]  # Width of rank text
 
-            # Calculate Y-position for the separator "|" (aligned with rank text)
-            separator_y_position = rank_y_position  # Keep separator aligned with rank text
+            # Calculate Y-position for the first "|" separator (aligned with rank text)
+            first_separator_y_position = rank_y_position  # Keep separator aligned with rank text
 
-            # Render the "|" separator with outline
-            separator_text = "|"
+            # Render the first "|" separator with outline
+            first_separator_text = "|"
             outline_color = "black"
             outline_width = 1
 
-            # Calculate separator position and text size
-            separator_position = PADDING + 65 + rank_width + 5
-            separator_bbox = draw.textbbox((0, 0), separator_text, font=font)
+            # Calculate first separator position and text size
+            first_separator_position = PADDING + 65 + rank_width + 5
+            first_separator_bbox = draw.textbbox((0, 0), first_separator_text, font=font)
 
             # Draw outline first
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
-                    draw.text((separator_position + x_offset, separator_y_position + y_offset),
-                              separator_text, font=font, fill=outline_color)
+                    draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
+                              first_separator_text, font=font, fill=outline_color)
 
             # Then draw the separator text
-            draw.text((separator_position, separator_y_position), separator_text, font=font, fill="white")
+            draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
             # Calculate the Y-position for the nickname text (centered vertically relative to PFP)
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
@@ -242,31 +245,50 @@ async def create_leaderboard_image():
             nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
 
             # Render nickname with vertical alignment and outline
-            nickname_position = separator_position + 20  # Shift nickname position to the right of the "|"
+            nickname_position = first_separator_position + 20  # Shift nickname position to the right of the "|"
             draw.text((nickname_position, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Fetch the width of the nickname text
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Calculate width from bbox
 
-            # Render points (XP) with "|" separator
+            # Calculate Y-position for the second "|" separator (aligned with nickname text)
+            second_separator_y_position = nickname_y_position  # Keep separator aligned with nickname text
+
+            # Render the second "|" separator with outline
+            second_separator_text = "|"
+
+            # Calculate second separator position and text size
+            second_separator_position = nickname_position + nickname_width + 10  # Position after nickname
+            second_separator_bbox = draw.textbbox((0, 0), second_separator_text, font=font)
+
+            # Draw outline first
+            for x_offset in range(-outline_width, outline_width + 1):
+                for y_offset in range(-outline_width, outline_width + 1):
+                    draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
+                              second_separator_text, font=font, fill=outline_color)
+
+            # Then draw the separator text
+            draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
+
+            # Calculate Y-position for the points (XP) text (centered vertically relative to PFP)
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
-            points_width = points_bbox[2] - points_bbox[0]  # Calculate width from bbox
+            points_height = points_bbox[3] - points_bbox[1]
+            points_y_position = y_position + (57 - points_height) // 2 - 5  # Centered with 5px upward offset
 
-            # Render the "|" separator before XP with outline
-            points_separator_position = nickname_position + nickname_width + 10  # Position after nickname
-            draw.text((points_separator_position, separator_y_position), "|", font=font, fill="white")
-
-            # Render XP points with vertical alignment and outline
-            points_position = points_separator_position + 20  # Space between "|" and points text
-            draw.text((points_position, nickname_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
+            # Render points (XP) with vertical alignment and outline
+            points_position = second_separator_position + 20  # Space between second "|" and points text
+            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             y_position += 60  # Space for next row of text
-            img_binary = BytesIO()
-            img.save(img_binary, format="PNG")
-            img_binary.seek(0)
+
+    img_binary = BytesIO()
+    img.save(img_binary, format="PNG")
+    img_binary.seek(0)
 
     return img_binary
+
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
