@@ -139,7 +139,12 @@ async def get_member(user_id):
 async def create_leaderboard_image():
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
-font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/Rubik-Bold.ttf?v=1731865318454"
+
+    # Fetch fonts
+    font_url = "https://github.com/whotfknows7/noto_sans/raw/refs/heads/main/NotoSans-VariableFont_wdth,wght.ttf"
+    response = requests.get(font_url)
+    font_data = BytesIO(response.content)
+    font = ImageFont.truetype(font_data, size=24)
 
     # Rank-specific background colors
     rank_colors = {
