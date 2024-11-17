@@ -256,6 +256,7 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
@@ -266,11 +267,8 @@ async def update_leaderboard():
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
-        # Fetch the leaderboard data
-        top_users = fetch_top_users()
-
         # Generate the leaderboard image
-        image = await create_leaderboard_image(top_users)
+        image = await create_leaderboard_image()
 
         # Ensure image is passed as a file, not trying to log or serialize the object
         global leaderboard_message
@@ -294,8 +292,6 @@ async def update_leaderboard():
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
 
-
-ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
     "🥉VETERAN": {"message": "🎉 Congrats {member.mention}! You've become a **VETERAN** 🥉 member!", "has_perms": False},
