@@ -288,7 +288,6 @@ async def create_leaderboard_image():
 
     return img_binary
 
-
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
