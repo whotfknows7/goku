@@ -173,18 +173,24 @@ def fetch_emoji_image(emoji_char):
         return None
 
 def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
+    # Split the nickname into text and emoji parts
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
-    # Draw regular text first
+    # Draw the regular text first and get its bounding box
     draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
-
-    # Get the bounding box of the regular text to place emojis next to it
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
-    text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]  # Height of the regular text part
+
+    # Calculate the vertical position for the text to center it within the box
+    text_y_position = position[1] + (57 - text_height) // 2  # 57 is the height of the row
 
     # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + text_width + 5, position[1])
+    emoji_position = (position[0] + text_width + 5, text_y_position)
+
+    # Define a small vertical offset for emojis to align them better with the text
+    emoji_offset = -1  # Adjust this value to fine-tune the alignment
 
     # Loop through each character in the emoji part and render it as an image
     for char in emoji_part:
@@ -193,9 +199,12 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
             if emoji_img:
                 emoji_img = emoji_img.resize((emoji_size, emoji_size))  # Resize to fit the text
 
-                # Paste the emoji image (uses transparency properly)
-                img.paste(emoji_img, emoji_position, emoji_img.convert('RGBA'))  # Use alpha channel for transparency
+                # Adjust vertical position of the emoji
+                adjusted_emoji_position = (emoji_position[0], emoji_position[1] + emoji_offset)
 
+                # Paste the emoji image with proper alpha channel for transparency
+                img.paste(emoji_img, adjusted_emoji_position, emoji_img.convert('RGBA'))
+                
                 # Update position for the next emoji
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
 
