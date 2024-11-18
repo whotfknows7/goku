@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands, tasks
 import logging
-import emoji
 import asyncio
 import time
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -21,8 +20,11 @@ from db_server import (
 # Error tracking
 import rollbar
 import rollbar.contrib.flask  # Only if you're using Flask integration
+import emoji
+
 def is_emoji(char):
-    return char in emoji.EMOJI_DATA
+    return emoji.is_emoji(char)
+
 # Rollbar initialization
 rollbar.init(
     access_token='cfd2554cc40741fca49e3d8d6502f039',
@@ -109,37 +111,6 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
     draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)  # Adjusted radius
     return mask
 
-# Download and load the emoji font (Noto Sans Emoji)
-emoji_font_path = "NotoColorEmoji-Regular.ttf"
-
-if not os.path.exists(emoji_font_path):
-    emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
-    response = requests.get(emoji_font_url)
-    if response.status_code == 200:
-        with open(emoji_font_path, "wb") as f:
-            f.write(response.content)
-        print("Noto Sans Emoji font downloaded successfully.")
-    else:
-        print("Failed to download Noto Sans Emoji font.")
-
-def render_nickname_with_emojis(draw, nickname, position, font, emoji_font):
-    # Split the nickname into regular text and emojis
-    text_part = ''.join([char for char in nickname if not is_emoji(char)])
-    emoji_part = ''.join([char for char in nickname if is_emoji(char)])
-
-    # Draw regular text first
-    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
-
-    # Use textbbox to get bounding box of the regular text part
-    text_bbox = draw.textbbox((0, 0), text_part, font=font)
-    text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
-
-    # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + text_width + 5, position[1])
-
-    # Draw emojis if any are present
-    if emoji_part:
-        draw.text(emoji_position, emoji_part, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
 
 # Function to round the corners of a profile picture
 def round_pfp(img_pfp):
@@ -172,6 +143,37 @@ async def get_member(user_id):
     except Exception as e:
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
+# Download and load the emoji font (Noto Sans Emoji)
+emoji_font_path = "NotoColorEmoji-Regular.ttf"
+
+if not os.path.exists(emoji_font_path):
+    emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
+    response = requests.get(emoji_font_url)
+    if response.status_code == 200:
+        with open(emoji_font_path, "wb") as f:
+            f.write(response.content)
+        print("Noto Sans Emoji font downloaded successfully.")
+    else:
+        print("Failed to download Noto Sans Emoji font.")
+
+def render_nickname_with_emojis(draw, nickname, position, font, emoji_font):
+    # Split the nickname into regular text and emojis
+    text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)]) 
+    emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
+
+    # Draw regular text first
+    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
+
+    # Use textbbox to get bounding box of the regular text part
+    text_bbox = draw.textbbox((0, 0), text_part, font=font)
+    text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
+
+    # Adjust the position to draw emojis after regular text
+    emoji_position = (position[0] + text_width + 5, position[1])
+
+    # Draw emojis if any are present
+    if emoji_part:
+        draw.text(emoji_position, emoji_part, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
 
 async def create_leaderboard_image():
     WIDTH = 800  # Define image width
@@ -274,7 +276,7 @@ async def create_leaderboard_image():
             nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
 
             # Apply emoji font only to nickname if emojis are present
-            if any(is_emoji(char) for char in nickname):  # Check for emoji characters
+            if any(emoji.is_emoji(char) for char in nickname):  # Check for emoji characters
                render_nickname_with_emojis(draw, nickname, (first_separator_position + 20, nickname_y_position), font, emoji_font)
             else:
                   draw.text((first_separator_position + 20, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
