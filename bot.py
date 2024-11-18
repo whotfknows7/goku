@@ -176,12 +176,13 @@ def fetch_emoji_image(emoji_char):
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
 
-def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
+def render_nickname_with_emoji_images(draw, img, nickname, position, font, color, emoji_size=28):
+    # Separate text and emoji parts
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
     # Draw regular text first
-    draw.text(position, nickname, font=font, fill=color)
+    draw.text(position, text_part, font=font, fill=color)
 
     # Get the bounding box of the regular text to place emojis next to it
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
@@ -227,7 +228,7 @@ async def create_leaderboard_image():
     # Rank-specific text colors
     rank_colors = {
         1: "#FFD700",  # Gold for Rank 1
-        2: "#E6E8FA",  # Silver for Rank 2
+        2: "#B5B7BB",  # Silver for Rank 2
         3: "#CD7F32",  # Bronze for Rank 3
     }
 
