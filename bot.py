@@ -147,6 +147,16 @@ async def get_member(user_id):
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
 
+# List of emoji Unicode characters (can be expanded as needed)
+emojis = ["😂", "😊", "👍", "❤️", "🔥"]
+
+# Directory to save emoji images
+EMOJI_DIR = "path/to/emojis/"  # Update this path
+
+# Ensure the directory exists
+if not os.path.exists(EMOJI_DIR):
+    os.makedirs(EMOJI_DIR)
+
 
 def fetch_emoji_image(emoji_char):
     # Prepare the URL for the Emoji API
