@@ -320,6 +320,40 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
+@tasks.loop(seconds=20)
+async def update_leaderboard():
+    try:
+        # Fetch the channel to send the leaderboard to
+        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+
+        if not channel:
+            logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
+            return
+
+        # Generate the leaderboard image
+        image = await create_leaderboard_image()
+
+        # Ensure image is passed as a file, not trying to log or serialize the object
+        global leaderboard_message
+
+        if leaderboard_message:
+            # Delete the previous message if it exists
+            await leaderboard_message.delete()
+
+        # Send the new leaderboard message from scratch
+        leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
+
+    except discord.HTTPException as e:
+        if e.status == 429:
+            # Handle rate-limiting errors
+            retry_after = int(e.retry_after)
+            logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
+            await asyncio.sleep(retry_after)
+        else:
+            logger.error(f"HTTPException while updating leaderboard: {e}")
+
+    except Exception as e:
+        logger.error(f"Unexpected error in update_leaderboard: {e}")
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
