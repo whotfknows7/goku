@@ -250,7 +250,7 @@ async def create_leaderboard_image():
             nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
 
             # Apply emoji font only to nickname if emojis are present
-            if any(char in emoji.UNICODE_EMOJI for char in nickname):  # Check for emoji characters
+            if any(is_emoji(char) for char in nickname):  # Check for emoji characters
                 draw.text((first_separator_position + 20, nickname_y_position), nickname, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
             else:
                 draw.text((first_separator_position + 20, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
