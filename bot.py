@@ -224,7 +224,7 @@ async def create_leaderboard_image():
         logging.error("Failed to download font. Using default font instead.")
         font = ImageFont.load_default()  # Fallback to default font
 
-    # Rank-specific background colors
+    # Rank-specific text colors
     rank_colors = {
         1: "#FFD700",  # Gold for Rank 1
         2: "#E6E8FA",  # Silver for Rank 2
@@ -246,8 +246,8 @@ async def create_leaderboard_image():
 
             nickname, avatar_url = member
 
-            # Set background color based on rank
-            rank_bg_color = rank_colors.get(rank, "#36393e")
+            # Set background color for the row (neutral)
+            rank_bg_color = "#36393e"  # Default neutral color for all ranks
 
             # Draw the rounded rectangle for the rank
             draw.rounded_rectangle(
@@ -268,12 +268,13 @@ async def create_leaderboard_image():
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-            # Render rank text
+            # Render rank text with rank-specific color
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
-            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
+            rank_color = rank_colors.get(rank, "#FFFFFF")  # Default to white if not 1, 2, or 3
+            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill=rank_color, stroke_width=1, stroke_fill="black")
 
             # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
