@@ -59,7 +59,7 @@ leaderboard_message = None
 WIDTH, HEIGHT = 702, 610  # Set image size
 PADDING = 10  # Space from the edges of the image
 
-font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/TT%20Fors%20Trial%20Bold.ttf?v=1731866074399"
+font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
 
 response = requests.get(font_url)
 if response.status_code == 200:
@@ -69,6 +69,17 @@ if response.status_code == 200:
 else:
     print("Failed to download font.")
 
+font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
+
+# Request the font
+response = requests.get(font_url)
+
+if response.status_code == 200:
+    with open("NotoSansEmoji-Regular.ttf", "wb") as f:
+        f.write(response.content)
+    print("Font downloaded successfully.")
+else:
+    print("Failed to
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
