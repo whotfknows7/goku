@@ -291,10 +291,10 @@ async def create_leaderboard_image():
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
             render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
 
-            # Add extra space between nickname and second separator
+            # Calculate space between nickname and second separator, taking emojis into account
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
-            separator_gap = 10  # Adjust this value to control the space between the nickname and the second separator
-            second_separator_position = first_separator_position + 20 + nickname_width + separator_gap  # Add space between nickname and second separator
+            emoji_gap = 12  # Extra space if there are emojis
+            second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
 
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
@@ -320,6 +320,7 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
