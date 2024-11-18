@@ -290,7 +290,8 @@ async def create_leaderboard_image():
             # Render the nickname with emojis
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
-            render_nickname_with_emoji_images(draw, nickname, (first_separator_position + 20, nickname_y_position), font)
+
+            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
 
             # Render the second "|" separator
             second_separator_position = first_separator_position + 20 + (nickname_bbox[2] - nickname_bbox[0])  # Position after nickname
