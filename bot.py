@@ -119,15 +119,12 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
     img_pfp = img_pfp.convert('RGBA')
+    
     # Create a rounded mask with the size of the image
     mask = create_rounded_mask(img_pfp.size)
+    
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
-async def fetch_top_users_with_xp():
-    from db_server import cursor
-    cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
-    return cursor.fetchall()
-
 async def get_member(user_id):
     try:
         guild = bot.get_guild(GUILD_ID)
@@ -198,9 +195,34 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
 
                 # Update position for the next emoji
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
+async def fetch_and_process_pfp(avatar_url, max_height=57):
+    try:
+        # Fetch the profile picture from the URL
+        response = requests.get(avatar_url)
+        img_pfp = Image.open(BytesIO(response.content))
+        
+        # Get the original size
+        width, height = img_pfp.size
+        
+        # Calculate the new size maintaining aspect ratio
+        new_height = max_height
+        new_width = int((new_height / height) * width)
+        
+        # Resize the image
+        img_pfp = img_pfp.resize((new_width, new_height))  
+        
+        # Apply rounded corners
+        img_pfp = round_pfp(img_pfp)
+        
+        return img_pfp
+    
+    except Exception as e:
+        logging.error(f"Failed to fetch or process avatar: {e}")
+        # Return a default gray circle if the image fetching fails
+        return Image.new('RGBA', (max_height, max_height), color=(128, 128, 128, 255))  # Default gray circle
 
+# Adjust the existing `create_leaderboard_image` function to use the updated PFP fetching
 async def create_leaderboard_image():
-
     WIDTH = 800  # Image width
     HEIGHT = 600  # Image height
     PADDING = 10  # Padding for layout
@@ -235,7 +257,6 @@ async def create_leaderboard_image():
         draw.text((PADDING, PADDING), "No users found", font=font, fill="white")
     else:
         for rank, (user_id, xp) in enumerate(top_users, 1):
-
             member = await get_member(user_id)  # Example function to fetch member details
             if not member:
                 continue
@@ -252,15 +273,8 @@ async def create_leaderboard_image():
                 fill=rank_bg_color
             )
 
-            # Fetch user profile picture
-            try:
-                response = requests.get(avatar_url)
-                img_pfp = Image.open(BytesIO(response.content))
-                img_pfp = img_pfp.resize((57, 57))  # Resize PFP to 57x57
-                img_pfp = round_pfp(img_pfp)  # Apply rounded corners to the PFP
-            except Exception as e:
-                logging.error(f"Failed to fetch avatar for user {user_id}: {e}")
-                img_pfp = Image.new('RGBA', (57, 57), color=(128, 128, 128, 255))  # Default grey circle
+            # Fetch and process the user's profile picture
+            img_pfp = await fetch_and_process_pfp(avatar_url)
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
@@ -268,8 +282,7 @@ async def create_leaderboard_image():
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
-            rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
-
+            rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Calculate width for separators and nickname
@@ -279,8 +292,9 @@ async def create_leaderboard_image():
             # Render the first "|" separator with outline
             first_separator_text = "|"
             first_separator_y_position = rank_y_position
-            outline_width = 2
+            outline_width = 1  # Decreased outline width
             outline_color = "black"
+
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
@@ -297,24 +311,16 @@ async def create_leaderboard_image():
             emoji_gap = 12  # Extra space if there are emojis
             second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
 
-            # Render the first "|" separator with outline
-            first_separator_text = "|"
-            first_separator_y_position = rank_y_position
-            outline_width = 1  # Decreased outline width
-            outline_color = "black"
-            for x_offset in range(-outline_width, outline_width + 1):
-                for y_offset in range(-outline_width, outline_width + 1):
-                    draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
-                    first_separator_text, font=font, fill=outline_color)
-                    draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
+
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
-                    second_separator_text, font=font, fill=outline_color)
-                    draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
+                              second_separator_text, font=font, fill=outline_color)
+            draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
+
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
@@ -330,6 +336,7 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
