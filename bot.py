@@ -187,7 +187,7 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
     text_y_position = position[1] + (57 - text_height) // 2  # 57 is the height of the row
 
     # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + text_width + 5, text_y_position)
+    emoji_position = (position[1] + text_width + 5, text_y_position)
 
     # Define a small vertical offset for emojis to align them better with the text
     emoji_offset = -1  # Adjust this value to fine-tune the alignment
