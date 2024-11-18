@@ -20,6 +20,7 @@ from db_server import (
 # Error tracking
 import rollbar
 import rollbar.contrib.flask  # Only if you're using Flask integration
+import re
 import emoji
 
 def is_emoji(char):
@@ -143,43 +144,48 @@ async def get_member(user_id):
     except Exception as e:
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
-# Download and load the emoji font (Noto Sans Emoji)
-emoji_font_path = "NotoColorEmoji-Regular.ttf"
 
-if not os.path.exists(emoji_font_path):
-    emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
-    response = requests.get(emoji_font_url)
-
-    if response.status_code == 200:
-        with open(emoji_font_path, "wb") as f:
-            f.write(response.content)
-        print("Noto Sans Emoji font downloaded successfully.")
-    else:
-        print("Failed to download Noto Sans Emoji font.")
-
-# Define the render_nickname_with_emojis function
-def render_nickname_with_emojis(draw, nickname, position, font, emoji_font):
+def render_nickname_with_emoji_images(draw, nickname, position, font, emoji_size=28):
     # Split the nickname into regular text and emojis
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
-    
+
     # Draw regular text first
     draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
-    
-    # Use textbbox to get bounding box of the regular text part
+
+    # Get the bounding box of the regular text to place emojis next to it
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
     text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
 
     # Adjust the position to draw emojis after regular text
     emoji_position = (position[0] + text_width + 5, position[1])
 
-    # Draw emojis if any are present
-    if emoji_part:
-        draw.text(emoji_position, emoji_part, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
+    # Loop through each character in the emoji part and render it as an image
+    for char in emoji_part:
+        if emoji.is_emoji(char):  # Ensure it's an emoji
+            emoji_img = fetch_emoji_image(char)  # Fetch the emoji image
+            if emoji_img:
+                emoji_img = emoji_img.resize((emoji_size, emoji_size))  # Resize to fit the text
+                draw.bitmap(emoji_position, emoji_img.convert('RGBA'))  # Draw the emoji image
+                emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])  # Update position for the next emoji
+def fetch_emoji_image(emoji_char):
+    # Convert emoji character to Unicode code point
+    emoji_unicode = ''.join(f'{ord(c):x}' for c in emoji_char)
+    
+    # Create the emoji image URL using Twemoji's CDN
+    emoji_url = f"https://twemoji.maxcdn.com/v/latest/72x72/{emoji_unicode}.png"
+
+    try:
+        response = requests.get(emoji_url)
+        if response.status_code == 200:
+            img = Image.open(BytesIO(response.content))
+            return img
+    except Exception as e:
+        print(f"Failed to fetch emoji image for {emoji_char}: {e}")
 async def create_leaderboard_image():
-    WIDTH = 800  # Define image width
-    HEIGHT = 600  # Define image height
-    PADDING = 10  # Define padding for layout
+    WIDTH = 800  # Image width
+    HEIGHT = 600  # Image height
+    PADDING = 10  # Padding for layout
 
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
@@ -195,9 +201,6 @@ async def create_leaderboard_image():
     else:
         logging.error("Failed to download font. Using default font instead.")
         font = ImageFont.load_default()  # Fallback to default font
-
-    # Load the emoji font
-    emoji_font = ImageFont.truetype(emoji_font_path, size=28)
 
     # Rank-specific background colors
     rank_colors = {
@@ -261,8 +264,8 @@ async def create_leaderboard_image():
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
 
-            # Apply emoji font if needed
-            render_nickname_with_emojis(draw, nickname, (first_separator_position + 20, nickname_y_position), font, emoji_font)
+            # Apply emoji handling if emojis are in the nickname
+            render_nickname_with_emoji_images(draw, nickname, (first_separator_position + 20, nickname_y_position), font)
 
             # Render the second "|" separator
             second_separator_position = first_separator_position + 20 + (nickname_bbox[2] - nickname_bbox[0])  # Position after nickname
@@ -284,6 +287,7 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
