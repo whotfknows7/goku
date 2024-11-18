@@ -155,25 +155,15 @@ if not os.path.exists(EMOJI_DIR):
     os.makedirs(EMOJI_DIR)
 
 def fetch_emoji_image(emoji_char):
-    # Convert emoji to Unicode format using ord() to match filenames
-    emoji_unicode = format(ord(emoji_char), 'x')  # e.g., "1f602" for 😂
-    emoji_filename = f"{emoji_unicode}.png"  # Image file format for the emoji
-    
-    # Full path to the emoji image
+    emoji_unicode = format(ord(emoji_char), 'x')
+    emoji_filename = f"{emoji_unicode}.png"
     emoji_image_path = os.path.join(EMOJI_DIR, emoji_filename)
-    
-    # Check if the emoji image exists in the directory
+
     if os.path.exists(emoji_image_path):
         try:
-            # Open the image
-            img = Image.open(emoji_image_path).convert("RGBA")  # Force RGBA mode
-            print(f"Loaded emoji image: {emoji_image_path}")
-            
-            # If the emoji has transparency, add a solid background (e.g., black)
-            background = Image.new("RGBA", img.size, (0, 0, 0, 255))  # black background
-            background.paste(img, (0, 0), img)  # Paste the emoji image with its alpha channel
-            img = background  # Set the image to the one with background
-
+            img = Image.open(emoji_image_path).convert("RGBA")
+            # Remove or comment the print statement below
+            # print(f"Loaded emoji image: {emoji_image_path}")
             return img
         except Exception as e:
             logging.error(f"Failed to open image for emoji {emoji_char}: {e}")
@@ -181,6 +171,7 @@ def fetch_emoji_image(emoji_char):
     else:
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
+
 def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
@@ -245,8 +236,10 @@ async def create_leaderboard_image():
     else:
         for rank, (user_id, xp) in enumerate(top_users, 1):
             member = await get_member(user_id)  # Example function to fetch member details
+
             if not member:
                 continue
+
             nickname, avatar_url = member
 
             # Set background color based on rank
@@ -282,27 +275,41 @@ async def create_leaderboard_image():
             rank_width = rank_bbox[2] - rank_bbox[0]
             first_separator_position = PADDING + 65 + rank_width + 5
 
-            # Render the first "|" separator
+            # Render the first "|" separator with outline
             first_separator_text = "|"
             first_separator_y_position = rank_y_position
+            outline_width = 2
+            outline_color = "black"
+            for x_offset in range(-outline_width, outline_width + 1):
+                for y_offset in range(-outline_width, outline_width + 1):
+                    draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
+                              first_separator_text, font=font, fill=outline_color)
             draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
             # Render the nickname with emojis
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
-
             render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
 
-            # Render the second "|" separator
-            second_separator_position = first_separator_position + 20 + (nickname_bbox[2] - nickname_bbox[0])  # Position after nickname
+            # Add extra space between nickname and second separator
+            nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
+            separator_gap = 10  # Adjust this value to control the space between the nickname and the second separator
+            second_separator_position = first_separator_position + 20 + nickname_width + separator_gap  # Add space between nickname and second separator
+
+            # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
+            for x_offset in range(-outline_width, outline_width + 1):
+                for y_offset in range(-outline_width, outline_width + 1):
+                    draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
+                              second_separator_text, font=font, fill=outline_color)
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
 
-            # Render the XP points
+            # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
-            points_y_position = y_position + (57 - (points_bbox[3] - points_bbox[1])) // 2 - 5  # Centered with 5px upward offset
+            points_height = points_bbox[3] - points_bbox[1]
+            points_y_position = y_position + (57 - points_height) // 2 - 5  # Centered with 5px upward offset
             points_position = second_separator_position + 20
             draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
@@ -311,41 +318,8 @@ async def create_leaderboard_image():
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
+
     return img_binary
-@tasks.loop(seconds=20)
-async def update_leaderboard():
-    try:
-        # Fetch the channel to send the leaderboard to
-        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-
-        if not channel:
-            logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
-            return
-
-        # Generate the leaderboard image
-        image = await create_leaderboard_image()
-
-        # Ensure image is passed as a file, not trying to log or serialize the object
-        global leaderboard_message
-
-        if leaderboard_message:
-            # Delete the previous message if it exists
-            await leaderboard_message.delete()
-
-        # Send the new leaderboard message from scratch
-        leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
-
-    except discord.HTTPException as e:
-        if e.status == 429:
-            # Handle rate-limiting errors
-            retry_after = int(e.retry_after)
-            logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
-            await asyncio.sleep(retry_after)
-        else:
-            logger.error(f"HTTPException while updating leaderboard: {e}")
-
-    except Exception as e:
-        logger.error(f"Unexpected error in update_leaderboard: {e}")
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
