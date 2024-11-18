@@ -158,29 +158,32 @@ def fetch_emoji_image(emoji_char):
     # Convert emoji to Unicode format using ord() to match filenames
     emoji_unicode = format(ord(emoji_char), 'x')  # e.g., "1f602" for 😂
     emoji_filename = f"{emoji_unicode}.png"  # Image file format for the emoji
-    
+
     # Full path to the emoji image
     emoji_image_path = os.path.join(EMOJI_DIR, emoji_filename)
-    
+
     # Check if the emoji image exists in the directory
     if os.path.exists(emoji_image_path):
         try:
-            # Open the image
+            # Open the image and ensure it's in RGBA mode (with transparency)
             img = Image.open(emoji_image_path).convert("RGBA")  # Force RGBA mode
+
             print(f"Loaded emoji image: {emoji_image_path}")
-            
-            # If the emoji has transparency, add a solid background (e.g., black)
-            background = Image.new("RGBA", img.size, (0, 0, 0, 255))  # black background
-            background.paste(img, (0, 0), img)  # Paste the emoji image with its alpha channel
-            img = background  # Set the image to the one with background
+
+            # Ensure the image has an alpha channel (transparency) and doesn't need a solid background
+            # If the image has an alpha channel (transparency), we keep it as it is.
+            if img.mode != 'RGBA':
+                img = img.convert("RGBA")
 
             return img
+
         except Exception as e:
             logging.error(f"Failed to open image for emoji {emoji_char}: {e}")
             return None
     else:
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
+
 def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
