@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import logging
-from emoji import is_emoji 
+import emoji
 import asyncio
 import time
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
