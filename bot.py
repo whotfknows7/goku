@@ -116,17 +116,13 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
 
 
 # Function to round the corners of a profile picture
-
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
     img_pfp = img_pfp.convert('RGBA')
-    
     # Create a rounded mask with the size of the image
     mask = create_rounded_mask(img_pfp.size)
-    
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
-
 async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
@@ -176,13 +172,12 @@ def fetch_emoji_image(emoji_char):
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
 
-def render_nickname_with_emoji_images(draw, img, nickname, position, font, color, emoji_size=28):
-    # Separate text and emoji parts
+def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
     # Draw regular text first
-    draw.text(position, text_part, font=font, fill=color)
+    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
     # Get the bounding box of the regular text to place emojis next to it
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
@@ -225,10 +220,10 @@ async def create_leaderboard_image():
         logging.error("Failed to download font. Using default font instead.")
         font = ImageFont.load_default()  # Fallback to default font
 
-    # Rank-specific text colors
+    # Rank-specific background colors
     rank_colors = {
         1: "#FFD700",  # Gold for Rank 1
-        2: "#B5B7BB",  # Silver for Rank 2
+        2: "#E6E8FA",  # Silver for Rank 2
         3: "#CD7F32",  # Bronze for Rank 3
     }
 
@@ -247,11 +242,8 @@ async def create_leaderboard_image():
 
             nickname, avatar_url = member
 
-            # Set rank color based on rank number
-            rank_color = rank_colors.get(rank, "#FFFFFF")  # Default to white if not 1, 2, or 3
-
-            # Set background color for the row (neutral)
-            rank_bg_color = "#36393e"  # Default neutral color for all ranks
+            # Set background color based on rank
+            rank_bg_color = rank_colors.get(rank, "#36393e")
 
             # Draw the rounded rectangle for the rank
             draw.rounded_rectangle(
@@ -264,7 +256,7 @@ async def create_leaderboard_image():
             try:
                 response = requests.get(avatar_url)
                 img_pfp = Image.open(BytesIO(response.content))
-                img_pfp = img_pfp.resize((57, 58))  # Resize PFP to 57x57
+                img_pfp = img_pfp.resize((57, 57))  # Resize PFP to 57x57
                 img_pfp = round_pfp(img_pfp)  # Apply rounded corners to the PFP
             except Exception as e:
                 logging.error(f"Failed to fetch avatar for user {user_id}: {e}")
@@ -272,60 +264,55 @@ async def create_leaderboard_image():
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-            # Render rank text with rank-specific color
+            # Render rank text
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
-            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill=rank_color, stroke_width=1, stroke_fill="black")
+
+            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
             first_separator_position = PADDING + 65 + rank_width + 5
 
-            # Render the first "|" separator with rank color and outline
+            # Render the first "|" separator with outline
             first_separator_text = "|"
             first_separator_y_position = rank_y_position
-            outline_width = 1  # Reduced outline width
+            outline_width = 2
             outline_color = "black"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
                               first_separator_text, font=font, fill=outline_color)
+            draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
-            draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill=rank_color)
-
-            # Render the nickname with rank color
+            # Render the nickname with emojis
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 8  # Slightly move nickname text upwards
-            
-            # Render the nickname with emoji handling and apply rank color
-            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font, rank_color)
+            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
 
             # Calculate space between nickname and second separator, taking emojis into account
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
             emoji_gap = 12  # Extra space if there are emojis
             second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
 
-            # Render the second "|" separator with rank color and outline
+            # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
                               second_separator_text, font=font, fill=outline_color)
+            draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
 
-            draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill=rank_color)
-
-            # Render the XP points with rank color
+            # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
             points_height = points_bbox[3] - points_bbox[1]
             points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
             points_position = second_separator_position + 20
-            draw.text((points_position, points_y_position), points_text, font=font, fill=rank_color, stroke_width=1, stroke_fill="black")
+            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             y_position += 60  # Space for next row of text
 
