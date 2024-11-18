@@ -116,13 +116,17 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
 
 
 # Function to round the corners of a profile picture
+
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
     img_pfp = img_pfp.convert('RGBA')
+    
     # Create a rounded mask with the size of the image
     mask = create_rounded_mask(img_pfp.size)
+    
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
+
 async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
@@ -256,7 +260,7 @@ async def create_leaderboard_image():
             try:
                 response = requests.get(avatar_url)
                 img_pfp = Image.open(BytesIO(response.content))
-                img_pfp = img_pfp.resize((57, 57))  # Resize PFP to 57x57
+                img_pfp = img_pfp.resize((57, 58))  # Resize PFP to 57x57
                 img_pfp = round_pfp(img_pfp)  # Apply rounded corners to the PFP
             except Exception as e:
                 logging.error(f"Failed to fetch avatar for user {user_id}: {e}")
