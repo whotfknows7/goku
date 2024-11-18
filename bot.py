@@ -160,12 +160,12 @@ if not os.path.exists(emoji_font_path):
 # Define the render_nickname_with_emojis function
 def render_nickname_with_emojis(draw, nickname, position, font, emoji_font):
     # Split the nickname into regular text and emojis
-    text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)]) 
+    text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
-
+    
     # Draw regular text first
     draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
-
+    
     # Use textbbox to get bounding box of the regular text part
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
     text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
