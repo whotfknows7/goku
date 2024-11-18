@@ -154,11 +154,9 @@ EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis ar
 if not os.path.exists(EMOJI_DIR):
     os.makedirs(EMOJI_DIR)
 
-# Function to fetch emoji image from local folder
 def fetch_emoji_image(emoji_char):
     # Convert emoji to Unicode format using ord() to match filenames
     emoji_unicode = format(ord(emoji_char), 'x')  # e.g., "1f602" for 😂
-
     emoji_filename = f"{emoji_unicode}.png"  # Image file format for the emoji
     
     # Full path to the emoji image
@@ -168,7 +166,14 @@ def fetch_emoji_image(emoji_char):
     if os.path.exists(emoji_image_path):
         try:
             # Open the image
-            img = Image.open(emoji_image_path)
+            img = Image.open(emoji_image_path).convert("RGBA")  # Force RGBA mode
+            print(f"Loaded emoji image: {emoji_image_path}")
+            
+            # If the emoji has transparency, add a solid background (e.g., black)
+            background = Image.new("RGBA", img.size, (0, 0, 0, 255))  # black background
+            background.paste(img, (0, 0), img)  # Paste the emoji image with its alpha channel
+            img = background  # Set the image to the one with background
+
             return img
         except Exception as e:
             logging.error(f"Failed to open image for emoji {emoji_char}: {e}")
@@ -176,10 +181,7 @@ def fetch_emoji_image(emoji_char):
     else:
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
-
-# Function to render nickname with emojis
-def render_nickname_with_emoji_images(draw, nickname, position, font, emoji_size=28):
-    # Split the nickname into regular text and emojis
+def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
@@ -199,8 +201,12 @@ def render_nickname_with_emoji_images(draw, nickname, position, font, emoji_size
             emoji_img = fetch_emoji_image(char)  # Fetch the emoji image from local folder
             if emoji_img:
                 emoji_img = emoji_img.resize((emoji_size, emoji_size))  # Resize to fit the text
-                draw.bitmap(emoji_position, emoji_img.convert('RGBA'))  # Draw the emoji image
-                emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])  # Update position for the next emoji
+
+                # Paste the emoji image (uses transparency properly)
+                img.paste(emoji_img, emoji_position, emoji_img.convert('RGBA'))  # Use alpha channel for transparency
+
+                # Update position for the next emoji
+                emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
 
 # Function to create leaderboard image
 async def create_leaderboard_image():
