@@ -115,13 +115,16 @@ def render_nickname_with_emojis(draw, nickname, position, font, emoji_font):
     # Draw regular text first
     draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
+    # Use textbbox to get bounding box of the regular text part
+    text_bbox = draw.textbbox((0, 0), text_part, font=font)
+    text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
+
     # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + font.getsize(text_part)[0] + 5, position[1])
+    emoji_position = (position[0] + text_width + 5, position[1])
 
     # Draw emojis if any are present
     if emoji_part:
         draw.text(emoji_position, emoji_part, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
-
 # Function to round the corners of a profile picture
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
@@ -155,6 +158,10 @@ async def get_member(user_id):
         return None
 
 async def create_leaderboard_image():
+    WIDTH = 800  # Define image width
+    HEIGHT = 600  # Define image height
+    PADDING = 10  # Define padding for layout
+
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
 
@@ -167,20 +174,20 @@ async def create_leaderboard_image():
             f.write(response.content)
         font = ImageFont.truetype("TT Fors Trial Bold.ttf", size=28)
     else:
-        logger.error("Failed to download font. Using default font instead.")
+        logging.error("Failed to download font. Using default font instead.")
         font = ImageFont.load_default()  # Fallback to default font
 
-    # Load the Noto Sans Emoji font (only once)
-    emoji_font_path = "NotoColorEmoji.ttf"
-    if not os.path.exists(emoji_font_path):
+
         emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
         response = requests.get(emoji_font_url)
+
         if response.status_code == 200:
             with open(emoji_font_path, "wb") as f:
                 f.write(response.content)
             print("Noto Sans Emoji font downloaded successfully.")
         else:
             print("Failed to download Noto Sans Emoji font.")
+
     emoji_font = ImageFont.truetype(emoji_font_path, size=28)
 
     # Rank-specific background colors
@@ -204,7 +211,7 @@ async def create_leaderboard_image():
             nickname, avatar_url = member
 
             # Set background color based on rank
-            rank_bg_color = rank_colors.get(rank, "#36393e") 
+            rank_bg_color = rank_colors.get(rank, "#36393e")
 
             # Draw the rounded rectangle for the rank
             draw.rounded_rectangle(
@@ -220,7 +227,7 @@ async def create_leaderboard_image():
                 img_pfp = img_pfp.resize((57, 57))  # Resize PFP to 57x57
                 img_pfp = round_pfp(img_pfp)  # Apply rounded corners to the PFP
             except Exception as e:
-                logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
+                logging.error(f"Failed to fetch avatar for user {user_id}: {e}")
                 img_pfp = Image.new('RGBA', (57, 57), color=(128, 128, 128, 255))  # Default grey circle
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
@@ -265,7 +272,7 @@ async def create_leaderboard_image():
 
             # Apply emoji font only to nickname if emojis are present
             if any(is_emoji(char) for char in nickname):  # Check for emoji characters
-                draw.text((first_separator_position + 20, nickname_y_position), nickname, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
+                render_nickname_with_emojis(draw, nickname, (first_separator_position + 20, nickname_y_position), font, emoji_font)
             else:
                 draw.text((first_separator_position + 20, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
