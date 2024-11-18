@@ -59,7 +59,7 @@ leaderboard_message = None
 WIDTH, HEIGHT = 702, 610  # Set image size
 PADDING = 10  # Space from the edges of the image
 
-font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
+font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/TT%20Fors%20Trial%20Bold.ttf?v=1731866074399"
 
 response = requests.get(font_url)
 if response.status_code == 200:
@@ -69,17 +69,17 @@ if response.status_code == 200:
 else:
     print("Failed to download font.")
 
-font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
-
-# Request the font
-response = requests.get(font_url)
+# Download Noto Sans Emoji TTF
+emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"  # Direct URL to the TTF file
+response = requests.get(emoji_font_url)
 
 if response.status_code == 200:
-    with open("NotoSansEmoji-Regular.ttf", "wb") as f:
+    with open("NotoColorEmoji.ttf", "wb") as f:
         f.write(response.content)
-    print("Font downloaded successfully.")
+    print("Noto Sans Emoji font downloaded successfully.")
 else:
-    print("Failed to
+    print("Failed to download Noto Sans Emoji font.")
+
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -161,9 +161,10 @@ async def create_leaderboard_image():
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
 
-    # Fetch fonts
+    # Download and load the primary font (TT Fors Trial Bold)
     font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/TT%20Fors%20Trial%20Bold.ttf?v=1731866074399"
     response = requests.get(font_url)
+
     if response.status_code == 200:
         with open("TT Fors Trial Bold.ttf", "wb") as f:
             f.write(response.content)
@@ -171,6 +172,9 @@ async def create_leaderboard_image():
     else:
         logger.error("Failed to download font. Using default font instead.")
         font = ImageFont.load_default()  # Fallback to default font
+
+    # Load the Noto Sans Emoji font
+    emoji_font_url = ImageFont.truetype("NotoColorEmoji.ttf", size=28)
 
     # Rank-specific background colors
     rank_colors = {
@@ -180,7 +184,6 @@ async def create_leaderboard_image():
     }
 
     y_position = PADDING
-
     top_users = await fetch_top_users_with_xp()
 
     if not top_users:
@@ -189,10 +192,8 @@ async def create_leaderboard_image():
     else:
         for rank, (user_id, xp) in enumerate(top_users, 1):
             member = await get_member(user_id)
-
             if not member:
                 continue
-
             nickname, avatar_url = member
 
             # Set background color based on rank
@@ -267,8 +268,6 @@ async def create_leaderboard_image():
 
             # Render the second "|" separator with outline
             second_separator_text = "|"
-
-            # Calculate second separator position and text size
             second_separator_position = nickname_position + nickname_width + 10  # Position after nickname
             second_separator_bbox = draw.textbbox((0, 0), second_separator_text, font=font)
 
