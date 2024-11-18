@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import logging
+from emoji import is_emoji 
 import asyncio
 import time
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -20,13 +21,6 @@ from db_server import (
 # Error tracking
 import rollbar
 import rollbar.contrib.flask  # Only if you're using Flask integration
-import re
-import emoji
-
-def is_emoji(char):
-    return emoji.is_emoji(char)
-# Your Emoji API Key
-API_KEY = "9c048170c0da8b7bed769145176af3419008d0bb"
 
 # Rollbar initialization
 rollbar.init(
@@ -113,7 +107,20 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
     draw = ImageDraw.Draw(mask)
     draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)  # Adjusted radius
     return mask
+def render_nickname_with_emojis(draw, nickname, position, font, emoji_font):
+    # Split the nickname into regular text and emojis
+    text_part = ''.join([char for char in nickname if not is_emoji(char)])
+    emoji_part = ''.join([char for char in nickname if is_emoji(char)])
 
+    # Draw regular text first
+    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
+
+    # Adjust the position to draw emojis after regular text
+    emoji_position = (position[0] + font.getsize(text_part)[0] + 5, position[1])
+
+    # Draw emojis if any are present
+    if emoji_part:
+        draw.text(emoji_position, emoji_part, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
 
 # Function to round the corners of a profile picture
 def round_pfp(img_pfp):
@@ -147,76 +154,7 @@ async def get_member(user_id):
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
 
-# Directory where emoji images are stored
-EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
-
-# Ensure the emoji directory exists
-if not os.path.exists(EMOJI_DIR):
-    os.makedirs(EMOJI_DIR)
-
-def fetch_emoji_image(emoji_char):
-    # Convert emoji to Unicode format using ord() to match filenames
-    emoji_unicode = format(ord(emoji_char), 'x')  # e.g., "1f602" for 😂
-    emoji_filename = f"{emoji_unicode}.png"  # Image file format for the emoji
-
-    # Full path to the emoji image
-    emoji_image_path = os.path.join(EMOJI_DIR, emoji_filename)
-
-    # Check if the emoji image exists in the directory
-    if os.path.exists(emoji_image_path):
-        try:
-            # Open the image and ensure it's in RGBA mode (with transparency)
-            img = Image.open(emoji_image_path).convert("RGBA")  # Force RGBA mode
-
-            print(f"Loaded emoji image: {emoji_image_path}")
-
-            # Ensure the image has an alpha channel (transparency) and doesn't need a solid background
-            # If the image has an alpha channel (transparency), we keep it as it is.
-            if img.mode != 'RGBA':
-                img = img.convert("RGBA")
-
-            return img
-
-        except Exception as e:
-            logging.error(f"Failed to open image for emoji {emoji_char}: {e}")
-            return None
-    else:
-        logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
-        return None
-
-def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
-    text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
-    emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
-
-    # Draw regular text first
-    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
-
-    # Get the bounding box of the regular text to place emojis next to it
-    text_bbox = draw.textbbox((0, 0), text_part, font=font)
-    text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
-
-    # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + text_width + 5, position[1])
-
-    # Loop through each character in the emoji part and render it as an image
-    for char in emoji_part:
-        if emoji.is_emoji(char):  # Ensure it's an emoji
-            emoji_img = fetch_emoji_image(char)  # Fetch the emoji image from local folder
-            if emoji_img:
-                emoji_img = emoji_img.resize((emoji_size, emoji_size))  # Resize to fit the text
-
-                # Paste the emoji image (uses transparency properly)
-                img.paste(emoji_img, emoji_position, emoji_img.convert('RGBA'))  # Use alpha channel for transparency
-
-                # Update position for the next emoji
-                emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
-
-# Function to create leaderboard image
 async def create_leaderboard_image():
-    WIDTH = 800  # Image width
-    HEIGHT = 600  # Image height
-    PADDING = 10  # Padding for layout
-
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
 
@@ -229,8 +167,21 @@ async def create_leaderboard_image():
             f.write(response.content)
         font = ImageFont.truetype("TT Fors Trial Bold.ttf", size=28)
     else:
-        logging.error("Failed to download font. Using default font instead.")
+        logger.error("Failed to download font. Using default font instead.")
         font = ImageFont.load_default()  # Fallback to default font
+
+    # Load the Noto Sans Emoji font (only once)
+    emoji_font_path = "NotoColorEmoji.ttf"
+    if not os.path.exists(emoji_font_path):
+        emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
+        response = requests.get(emoji_font_url)
+        if response.status_code == 200:
+            with open(emoji_font_path, "wb") as f:
+                f.write(response.content)
+            print("Noto Sans Emoji font downloaded successfully.")
+        else:
+            print("Failed to download Noto Sans Emoji font.")
+    emoji_font = ImageFont.truetype(emoji_font_path, size=28)
 
     # Rank-specific background colors
     rank_colors = {
@@ -240,20 +191,20 @@ async def create_leaderboard_image():
     }
 
     y_position = PADDING
-    top_users = await fetch_top_users_with_xp()  # Example function to fetch users
+    top_users = await fetch_top_users_with_xp()
 
     if not top_users:
         # If no users fetched, display a message
         draw.text((PADDING, PADDING), "No users found", font=font, fill="white")
     else:
         for rank, (user_id, xp) in enumerate(top_users, 1):
-            member = await get_member(user_id)  # Example function to fetch member details
+            member = await get_member(user_id)
             if not member:
                 continue
             nickname, avatar_url = member
 
             # Set background color based on rank
-            rank_bg_color = rank_colors.get(rank, "#36393e")
+            rank_bg_color = rank_colors.get(rank, "#36393e") 
 
             # Draw the rounded rectangle for the rank
             draw.rounded_rectangle(
@@ -269,44 +220,83 @@ async def create_leaderboard_image():
                 img_pfp = img_pfp.resize((57, 57))  # Resize PFP to 57x57
                 img_pfp = round_pfp(img_pfp)  # Apply rounded corners to the PFP
             except Exception as e:
-                logging.error(f"Failed to fetch avatar for user {user_id}: {e}")
+                logger.error(f"Failed to fetch avatar for user {user_id}: {e}")
                 img_pfp = Image.new('RGBA', (57, 57), color=(128, 128, 128, 255))  # Default grey circle
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-            # Render rank text
+            # Calculate the Y-position for the rank text (centered vertically relative to PFP)
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 5  # Centered with 5px upward offset
+
+            # Render rank with adjusted vertical alignment (centered with PFP) and outline
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
-            # Calculate width for separators and nickname
-            rank_width = rank_bbox[2] - rank_bbox[0]
-            first_separator_position = PADDING + 65 + rank_width + 5
+            # Calculate the width of the rank text to position the "|" right after it
+            rank_width = rank_bbox[2] - rank_bbox[0]  # Width of rank text
 
-            # Render the first "|" separator
+            # Calculate Y-position for the first "|" separator (aligned with rank text)
+            first_separator_y_position = rank_y_position  # Keep separator aligned with rank text
+
+            # Render the first "|" separator with outline
             first_separator_text = "|"
-            first_separator_y_position = rank_y_position
+            outline_color = "black"
+            outline_width = 1
+
+            # Calculate first separator position and text size
+            first_separator_position = PADDING + 65 + rank_width + 5
+            first_separator_bbox = draw.textbbox((0, 0), first_separator_text, font=font)
+
+            # Draw outline first
+            for x_offset in range(-outline_width, outline_width + 1):
+                for y_offset in range(-outline_width, outline_width + 1):
+                    draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
+                              first_separator_text, font=font, fill=outline_color)
+
+            # Then draw the separator text
             draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
-            # Render the nickname with emojis
+            # Calculate the Y-position for the nickname text (centered vertically relative to PFP)
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
-            nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
+            nickname_height = nickname_bbox[3] - nickname_bbox[1]
+            nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
 
-            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
+            # Apply emoji font only to nickname if emojis are present
+            if any(is_emoji(char) for char in nickname):  # Check for emoji characters
+                draw.text((first_separator_position + 20, nickname_y_position), nickname, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
+            else:
+                draw.text((first_separator_position + 20, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
-            # Render the second "|" separator
-            second_separator_position = first_separator_position + 20 + (nickname_bbox[2] - nickname_bbox[0])  # Position after nickname
-            second_separator_y_position = nickname_y_position
+            # Fetch the width of the nickname text
+            nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Calculate width from bbox
+
+            # Calculate Y-position for the second "|" separator (aligned with nickname text)
+            second_separator_y_position = nickname_y_position  # Keep separator aligned with nickname text
+
+            # Render the second "|" separator with outline
             second_separator_text = "|"
+            second_separator_position = first_separator_position + 20 + nickname_width  # Position after nickname
+            second_separator_bbox = draw.textbbox((0, 0), second_separator_text, font=font)
+
+            # Draw outline first
+            for x_offset in range(-outline_width, outline_width + 1):
+                for y_offset in range(-outline_width, outline_width + 1):
+                    draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
+                              second_separator_text, font=font, fill=outline_color)
+
+            # Then draw the separator text
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
 
-            # Render the XP points
+            # Calculate Y-position for the points (XP) text (centered vertically relative to PFP)
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
-            points_y_position = y_position + (57 - (points_bbox[3] - points_bbox[1])) // 2 - 5  # Centered with 5px upward offset
-            points_position = second_separator_position + 20
+            points_height = points_bbox[3] - points_bbox[1]
+            points_y_position = y_position + (57 - points_height) // 2 - 5  # Centered with 5px upward offset
+
+            # Render points (XP) with vertical alignment and outline
+            points_position = second_separator_position + 20  # Space between second "|" and points text
             draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             y_position += 60  # Space for next row of text
@@ -315,6 +305,7 @@ async def create_leaderboard_image():
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
     return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
