@@ -106,9 +106,7 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
     mask = Image.new('L', size, 0)  # 'L' mode creates a grayscale image
     draw = ImageDraw.Draw(mask)
     draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)  # Adjusted radius
-    return mask
-
-        emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
+    return maskemoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
         response = requests.get(emoji_font_url)
 
         if response.status_code == 200:
