@@ -1,11 +1,15 @@
-
 import discord
 from discord.ext import commands, tasks
-import re
 import logging
-import rollbar
-import rollbar.contrib.flask
-from emoji import is_emoji
+from emoji import is_emoji  # If you only need `is_emoji`, no need to import `emoji` entirely
+import asyncio
+import time
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import requests
+from io import BytesIO
+import os
+
+# Database functions import
 from db_server import (
     update_user_xp,
     track_activity,
@@ -13,11 +17,10 @@ from db_server import (
     update_boost_cooldown,
     check_activity_burst
 )
-import asyncio
-import time
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
-import requests
-from io import BytesIO
+
+# Error tracking
+import rollbar
+import rollbar.contrib.flask  # Only if you're using Flask integration
 
 # Rollbar initialization
 rollbar.init(
