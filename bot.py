@@ -184,7 +184,7 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
     text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
 
     # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + text_width + 5, position[1] + 2)  # Slightly adjust Y position to move emojis down
+    emoji_position = (position[0] + text_width + 5, position[1])  # No vertical offset, emojis are aligned with the text
 
     # Loop through each character in the emoji part and render it as an image
     for char in emoji_part:
@@ -199,7 +199,6 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
                 # Update position for the next emoji
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
 
-# Function to create leaderboard image
 async def create_leaderboard_image():
 
     WIDTH = 800  # Image width
@@ -229,7 +228,6 @@ async def create_leaderboard_image():
     }
 
     y_position = PADDING
-
     top_users = await fetch_top_users_with_xp()  # Example function to fetch users
 
     if not top_users:
@@ -239,7 +237,6 @@ async def create_leaderboard_image():
         for rank, (user_id, xp) in enumerate(top_users, 1):
 
             member = await get_member(user_id)  # Example function to fetch member details
-
             if not member:
                 continue
 
@@ -271,7 +268,8 @@ async def create_leaderboard_image():
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
-            rank_y_position = y_position + (57 - rank_height) // 2 - 10  # Centered with slight upward offset
+            rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
+
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Calculate width for separators and nickname
@@ -283,7 +281,6 @@ async def create_leaderboard_image():
             first_separator_y_position = rank_y_position
             outline_width = 2
             outline_color = "black"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
@@ -292,7 +289,7 @@ async def create_leaderboard_image():
 
             # Render the nickname with emojis
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
-            nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 10  # Slightly upward offset
+            nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 8  # Slightly move nickname text upwards
             render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
 
             # Calculate space between nickname and second separator, taking emojis into account
@@ -303,7 +300,6 @@ async def create_leaderboard_image():
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
@@ -314,7 +310,7 @@ async def create_leaderboard_image():
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
             points_height = points_bbox[3] - points_bbox[1]
-            points_y_position = y_position + (57 - points_height) // 2 - 10  # Slightly upward offset
+            points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
             points_position = second_separator_position + 20
             draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
