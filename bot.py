@@ -21,7 +21,8 @@ from db_server import (
 # Error tracking
 import rollbar
 import rollbar.contrib.flask  # Only if you're using Flask integration
-
+def is_emoji(char):
+    return char in emoji.EMOJI_DATA
 # Rollbar initialization
 rollbar.init(
     access_token='cfd2554cc40741fca49e3d8d6502f039',
@@ -274,9 +275,9 @@ async def create_leaderboard_image():
 
             # Apply emoji font only to nickname if emojis are present
             if any(is_emoji(char) for char in nickname):  # Check for emoji characters
-                render_nickname_with_emojis(draw, nickname, (first_separator_position + 20, nickname_y_position), font, emoji_font_url)
+               render_nickname_with_emojis(draw, nickname, (first_separator_position + 20, nickname_y_position), font, emoji_font)
             else:
-                draw.text((first_separator_position + 20, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
+                  draw.text((first_separator_position + 20, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Fetch the width of the nickname text
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Calculate width from bbox
