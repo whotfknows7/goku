@@ -148,7 +148,7 @@ async def get_member(user_id):
         return None
 
 # Directory where emoji images are stored
-EMOJI_DIR = "path/to/emojis/"  # Update this to the correct path where emojis are saved
+EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
 # Ensure the emoji directory exists
 if not os.path.exists(EMOJI_DIR):
@@ -156,8 +156,9 @@ if not os.path.exists(EMOJI_DIR):
 
 # Function to fetch emoji image from local folder
 def fetch_emoji_image(emoji_char):
-    # Convert emoji to unicode format to match filenames
-    emoji_unicode = emoji.char_to_unicode(emoji_char)[2:]  # e.g., "1f602" for 😂
+    # Convert emoji to Unicode format using ord() to match filenames
+    emoji_unicode = format(ord(emoji_char), 'x')  # e.g., "1f602" for 😂
+
     emoji_filename = f"{emoji_unicode}.png"  # Image file format for the emoji
     
     # Full path to the emoji image
@@ -303,7 +304,7 @@ async def create_leaderboard_image():
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
-return img_binary
+    return img_binary
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
