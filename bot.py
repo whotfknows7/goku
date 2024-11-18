@@ -59,26 +59,6 @@ leaderboard_message = None
 WIDTH, HEIGHT = 702, 610  # Set image size
 PADDING = 10  # Space from the edges of the image
 
-font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/TT%20Fors%20Trial%20Bold.ttf?v=1731866074399"
-
-response = requests.get(font_url)
-if response.status_code == 200:
-    with open("TT Fors Trial Bold.ttf", "wb") as f:
-        f.write(response.content)
-    print("Font downloaded successfully.")
-else:
-    print("Failed to download font.")
-
-# Download Noto Sans Emoji TTF
-emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"  # Direct URL to the TTF file
-response = requests.get(emoji_font_url)
-
-if response.status_code == 200:
-    with open("NotoColorEmoji.ttf", "wb") as f:
-        f.write(response.content)
-    print("Noto Sans Emoji font downloaded successfully.")
-else:
-    print("Failed to download Noto Sans Emoji font.")
 
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
@@ -173,8 +153,18 @@ async def create_leaderboard_image():
         logger.error("Failed to download font. Using default font instead.")
         font = ImageFont.load_default()  # Fallback to default font
 
-    # Load the Noto Sans Emoji font
-    emoji_font_url = ImageFont.truetype("NotoColorEmoji.ttf", size=28)
+    # Load the Noto Sans Emoji font (only once)
+    emoji_font_path = "NotoColorEmoji.ttf"
+    if not os.path.exists(emoji_font_path):
+        emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
+        response = requests.get(emoji_font_url)
+        if response.status_code == 200:
+            with open(emoji_font_path, "wb") as f:
+                f.write(response.content)
+            print("Noto Sans Emoji font downloaded successfully.")
+        else:
+            print("Failed to download Noto Sans Emoji font.")
+    emoji_font = ImageFont.truetype(emoji_font_path, size=28)
 
     # Rank-specific background colors
     rank_colors = {
@@ -256,9 +246,11 @@ async def create_leaderboard_image():
             nickname_height = nickname_bbox[3] - nickname_bbox[1]
             nickname_y_position = y_position + (57 - nickname_height) // 2 - 5  # Centered with 5px upward offset
 
-            # Render nickname with vertical alignment and outline
-            nickname_position = first_separator_position + 20  # Shift nickname position to the right of the "|"
-            draw.text((nickname_position, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
+            # Apply emoji font only to nickname if emojis are present
+            if any(char in emoji.UNICODE_EMOJI for char in nickname):  # Check for emoji characters
+                draw.text((first_separator_position + 20, nickname_y_position), nickname, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
+            else:
+                draw.text((first_separator_position + 20, nickname_y_position), nickname, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Fetch the width of the nickname text
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Calculate width from bbox
@@ -268,7 +260,7 @@ async def create_leaderboard_image():
 
             # Render the second "|" separator with outline
             second_separator_text = "|"
-            second_separator_position = nickname_position + nickname_width + 10  # Position after nickname
+            second_separator_position = first_separator_position + 20 + nickname_width  # Position after nickname
             second_separator_bbox = draw.textbbox((0, 0), second_separator_text, font=font)
 
             # Draw outline first
@@ -297,7 +289,6 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
