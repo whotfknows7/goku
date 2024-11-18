@@ -290,8 +290,8 @@ async def create_leaderboard_image():
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
-
     return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
