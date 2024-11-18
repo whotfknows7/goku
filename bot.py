@@ -108,18 +108,20 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
     draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)  # Adjusted radius
     return mask
 
-        emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
-        response = requests.get(emoji_font_url)
+# Download and load the emoji font (Noto Sans Emoji)
+emoji_font_path = "NotoColorEmoji-Regular.ttf"
 
-        if response.status_code == 200:
-            with open(emoji_font_url, "wb") as f:
-                f.write(response.content)
-            print("Noto Sans Emoji font downloaded successfully.")
-        else:
-            print("Failed to download Noto Sans Emoji font.")
-    emoji_font_url = ImageFont.truetype(emoji_font_url, size=28)
+if not os.path.exists(emoji_font_path):
+    emoji_font_url = "https://cdn.glitch.me/04f6dfef-4255-4a66-b865-c95597b8df08/NotoColorEmoji-Regular.ttf?v=1731916149427"
+    response = requests.get(emoji_font_url)
+    if response.status_code == 200:
+        with open(emoji_font_path, "wb") as f:
+            f.write(response.content)
+        print("Noto Sans Emoji font downloaded successfully.")
+    else:
+        print("Failed to download Noto Sans Emoji font.")
 
-def render_nickname_with_emojis(draw, nickname, position, font, emoji_font_url):
+def render_nickname_with_emojis(draw, nickname, position, font, emoji_font):
     # Split the nickname into regular text and emojis
     text_part = ''.join([char for char in nickname if not is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if is_emoji(char)])
@@ -136,7 +138,8 @@ def render_nickname_with_emojis(draw, nickname, position, font, emoji_font_url):
 
     # Draw emojis if any are present
     if emoji_part:
-        draw.text(emoji_position, emoji_part, font=emoji_font_url, fill="white", stroke_width=1, stroke_fill="black")
+        draw.text(emoji_position, emoji_part, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
+
 # Function to round the corners of a profile picture
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
