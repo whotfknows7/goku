@@ -181,7 +181,7 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
     # Draw regular text first
-    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
+    draw.text(position, nickname, font=font, fill=color)
 
     # Get the bounding box of the regular text to place emojis next to it
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
@@ -246,6 +246,9 @@ async def create_leaderboard_image():
 
             nickname, avatar_url = member
 
+            # Set rank color based on rank number
+            rank_color = rank_colors.get(rank, "#FFFFFF")  # Default to white if not 1, 2, or 3
+
             # Set background color for the row (neutral)
             rank_bg_color = "#36393e"  # Default neutral color for all ranks
 
@@ -273,14 +276,13 @@ async def create_leaderboard_image():
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
-            rank_color = rank_colors.get(rank, "#FFFFFF")  # Default to white if not 1, 2, or 3
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill=rank_color, stroke_width=1, stroke_fill="black")
 
             # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
             first_separator_position = PADDING + 65 + rank_width + 5
 
-            # Render the first "|" separator with outline
+            # Render the first "|" separator with rank color and outline
             first_separator_text = "|"
             first_separator_y_position = rank_y_position
             outline_width = 1  # Reduced outline width
@@ -291,19 +293,21 @@ async def create_leaderboard_image():
                     draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
                               first_separator_text, font=font, fill=outline_color)
 
-            draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
+            draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill=rank_color)
 
-            # Render the nickname with emojis
+            # Render the nickname with rank color
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 8  # Slightly move nickname text upwards
-            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
+            
+            # Render the nickname with emoji handling and apply rank color
+            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font, rank_color)
 
             # Calculate space between nickname and second separator, taking emojis into account
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
             emoji_gap = 12  # Extra space if there are emojis
             second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
 
-            # Render the second "|" separator with outline
+            # Render the second "|" separator with rank color and outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
 
@@ -312,15 +316,15 @@ async def create_leaderboard_image():
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
                               second_separator_text, font=font, fill=outline_color)
 
-            draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
+            draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill=rank_color)
 
-            # Render the XP points with space
+            # Render the XP points with rank color
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
             points_height = points_bbox[3] - points_bbox[1]
             points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
             points_position = second_separator_position + 20
-            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
+            draw.text((points_position, points_y_position), points_text, font=font, fill=rank_color, stroke_width=1, stroke_fill="black")
 
             y_position += 60  # Space for next row of text
 
