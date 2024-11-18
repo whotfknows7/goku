@@ -172,7 +172,7 @@ def fetch_emoji_image(emoji_char):
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
 
-def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
+def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28, emoji_offset_y=5):
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
@@ -183,8 +183,8 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
     text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
 
-    # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + text_width + 5, position[1])  # No vertical offset, emojis are aligned with the text
+    # Adjust the position to draw emojis after regular text, adding an offset to move them down
+    emoji_position = (position[0] + text_width + 5, position[1] + emoji_offset_y)  # Apply vertical offset to emojis
 
     # Loop through each character in the emoji part and render it as an image
     for char in emoji_part:
@@ -287,25 +287,34 @@ async def create_leaderboard_image():
                               first_separator_text, font=font, fill=outline_color)
             draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
-            # Render the nickname with emojis
+            # Render the nickname with emojis           
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 8  # Slightly move nickname text upwards
-            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
+            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font, emoji_offset_y=5)
 
             # Calculate space between nickname and second separator, taking emojis into account
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
             emoji_gap = 12  # Extra space if there are emojis
             second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
 
+            # Render the first "|" separator with outline
+            first_separator_text = "|"
+            first_separator_y_position = rank_y_position
+            outline_width = 1  # Decreased outline width
+            outline_color = "black"
+            for x_offset in range(-outline_width, outline_width + 1):
+                for y_offset in range(-outline_width, outline_width + 1):
+                    draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
+                    first_separator_text, font=font, fill=outline_color)
+                    draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
-                              second_separator_text, font=font, fill=outline_color)
-            draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
-
+                    second_separator_text, font=font, fill=outline_color)
+                    draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
@@ -321,7 +330,6 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
