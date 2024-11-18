@@ -172,12 +172,12 @@ def fetch_emoji_image(emoji_char):
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
 
-def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
+def render_nickname_with_emoji_images(draw, img, nickname, position, font, rank_color, emoji_size=28):
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
-    # Draw regular text first
-    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
+    # Draw regular text with rank-specific color
+    draw.text(position, text_part, font=font, fill=rank_color, stroke_width=1, stroke_fill="black")
 
     # Get the bounding box of the regular text to place emojis next to it
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
@@ -227,6 +227,13 @@ async def create_leaderboard_image():
         3: "#CD7F32",  # Bronze for Rank 3
     }
 
+    # Text color for the top 3 ranks
+    rank_text_colors = {
+        1: "#00FFFF",  # Aqua for Rank 1
+        2: "#32CD32",  # Green Grass for Rank 2
+        3: "#FF00FF",  # Magenta for Rank 3
+    }
+
     y_position = PADDING
     top_users = await fetch_top_users_with_xp()  # Example function to fetch users
 
@@ -264,12 +271,14 @@ async def create_leaderboard_image():
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-            # Render rank text
+            # Render rank text with specific color for the top 3 ranks
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 5  # Centered with 5px upward offset
-            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
+
+            rank_text_color = rank_text_colors.get(rank, "white")  # Default to white if not top 3
+            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill=rank_text_color, stroke_width=1, stroke_fill="black")
 
             # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
@@ -286,10 +295,10 @@ async def create_leaderboard_image():
                               first_separator_text, font=font, fill=outline_color)
             draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
-            # Render the nickname with emojis
+            # Render the nickname with emojis and rank-specific color
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
-            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
+            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font, rank_text_color)
 
             # Calculate space between nickname and second separator, taking emojis into account
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
