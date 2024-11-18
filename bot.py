@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import logging
-from emoji import is_emoji  # If you only need `is_emoji`, no need to import `emoji` entirely
+from emoji import is_emoji 
 import asyncio
 import time
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -107,6 +107,20 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
     draw = ImageDraw.Draw(mask)
     draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)  # Adjusted radius
     return mask
+def render_nickname_with_emojis(draw, nickname, position, font, emoji_font):
+    # Split the nickname into regular text and emojis
+    text_part = ''.join([char for char in nickname if not is_emoji(char)])
+    emoji_part = ''.join([char for char in nickname if is_emoji(char)])
+
+    # Draw regular text first
+    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
+
+    # Adjust the position to draw emojis after regular text
+    emoji_position = (position[0] + font.getsize(text_part)[0] + 5, position[1])
+
+    # Draw emojis if any are present
+    if emoji_part:
+        draw.text(emoji_position, emoji_part, font=emoji_font, fill="white", stroke_width=1, stroke_fill="black")
 
 # Function to round the corners of a profile picture
 def round_pfp(img_pfp):
