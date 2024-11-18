@@ -147,48 +147,36 @@ async def get_member(user_id):
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
 
-# List of emoji Unicode characters (can be expanded as needed)
-emojis = ["😂", "😊", "👍", "❤️", "🔥"]
+# Directory where emoji images are stored
+EMOJI_DIR = "path/to/emojis/"  # Update this to the correct path where emojis are saved
 
-# Directory to save emoji images
-EMOJI_DIR = "path/to/emojis/"  # Update this path
-
-# Ensure the directory exists
+# Ensure the emoji directory exists
 if not os.path.exists(EMOJI_DIR):
     os.makedirs(EMOJI_DIR)
 
-
+# Function to fetch emoji image from local folder
 def fetch_emoji_image(emoji_char):
-    # Prepare the URL for the Emoji API
-    emoji_code = emoji_char.encode('unicode_escape').decode('utf-8')[2:]  # Convert emoji to its unicode escape form
-    url = f"https://emoji-api.com/emojis/{emoji_code}?access_key={API_KEY}"
-
-    try:
-        # Make the request to Emoji API
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
-        
-        # Print the response to see the structure
-        print(response.json())  # This will show the full response JSON
-        
-        # Extract image URL from the response JSON
-        data = response.json()
-        if data and 'image_url' in data[0]:
-            image_url = data[0]['image_url']
-            
-            # Fetch the image
-            image_response = requests.get(image_url)
-            image_response.raise_for_status()  # Raise an error for bad responses
-
-            # Open the image using PIL
-            img = Image.open(BytesIO(image_response.content))
+    # Convert emoji to unicode format to match filenames
+    emoji_unicode = emoji.char_to_unicode(emoji_char)[2:]  # e.g., "1f602" for 😂
+    emoji_filename = f"{emoji_unicode}.png"  # Image file format for the emoji
+    
+    # Full path to the emoji image
+    emoji_image_path = os.path.join(EMOJI_DIR, emoji_filename)
+    
+    # Check if the emoji image exists in the directory
+    if os.path.exists(emoji_image_path):
+        try:
+            # Open the image
+            img = Image.open(emoji_image_path)
             return img
-        else:
-            print(f"Emoji image not found for {emoji_char}")
+        except Exception as e:
+            logging.error(f"Failed to open image for emoji {emoji_char}: {e}")
             return None
-    except requests.exceptions.RequestException as e:
-        print(f"Failed to fetch emoji image for {emoji_char}: {e}")
+    else:
+        logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
+
+# Function to render nickname with emojis
 def render_nickname_with_emoji_images(draw, nickname, position, font, emoji_size=28):
     # Split the nickname into regular text and emojis
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
@@ -207,11 +195,13 @@ def render_nickname_with_emoji_images(draw, nickname, position, font, emoji_size
     # Loop through each character in the emoji part and render it as an image
     for char in emoji_part:
         if emoji.is_emoji(char):  # Ensure it's an emoji
-            emoji_img = fetch_emoji_image(char)  # Fetch the emoji image
+            emoji_img = fetch_emoji_image(char)  # Fetch the emoji image from local folder
             if emoji_img:
                 emoji_img = emoji_img.resize((emoji_size, emoji_size))  # Resize to fit the text
                 draw.bitmap(emoji_position, emoji_img.convert('RGBA'))  # Draw the emoji image
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])  # Update position for the next emoji
+
+# Function to create leaderboard image
 async def create_leaderboard_image():
     WIDTH = 800  # Image width
     HEIGHT = 600  # Image height
@@ -293,8 +283,6 @@ async def create_leaderboard_image():
             # Render the nickname with emojis
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
-
-            # Apply emoji handling if emojis are in the nickname
             render_nickname_with_emoji_images(draw, nickname, (first_separator_position + 20, nickname_y_position), font)
 
             # Render the second "|" separator
@@ -315,9 +303,7 @@ async def create_leaderboard_image():
     img_binary = BytesIO()
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
-
-    return img_binary
-
+return img_binary
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
