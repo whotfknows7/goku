@@ -25,6 +25,8 @@ import emoji
 
 def is_emoji(char):
     return emoji.is_emoji(char)
+# Your Emoji API Key
+API_KEY = "9c048170c0da8b7bed769145176af3419008d0bb"
 
 # Rollbar initialization
 rollbar.init(
@@ -145,6 +147,38 @@ async def get_member(user_id):
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
 
+
+def fetch_emoji_image(emoji_char):
+    # Prepare the URL for the Emoji API
+    emoji_code = emoji_char.encode('unicode_escape').decode('utf-8')[2:]  # Convert emoji to its unicode escape form
+    url = f"https://emoji-api.com/emojis/{emoji_code}?access_key={API_KEY}"
+
+    try:
+        # Make the request to Emoji API
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+        
+        # Print the response to see the structure
+        print(response.json())  # This will show the full response JSON
+        
+        # Extract image URL from the response JSON
+        data = response.json()
+        if data and 'image_url' in data[0]:
+            image_url = data[0]['image_url']
+            
+            # Fetch the image
+            image_response = requests.get(image_url)
+            image_response.raise_for_status()  # Raise an error for bad responses
+
+            # Open the image using PIL
+            img = Image.open(BytesIO(image_response.content))
+            return img
+        else:
+            print(f"Emoji image not found for {emoji_char}")
+            return None
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to fetch emoji image for {emoji_char}: {e}")
+        return None
 def render_nickname_with_emoji_images(draw, nickname, position, font, emoji_size=28):
     # Split the nickname into regular text and emojis
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
@@ -168,20 +202,6 @@ def render_nickname_with_emoji_images(draw, nickname, position, font, emoji_size
                 emoji_img = emoji_img.resize((emoji_size, emoji_size))  # Resize to fit the text
                 draw.bitmap(emoji_position, emoji_img.convert('RGBA'))  # Draw the emoji image
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])  # Update position for the next emoji
-def fetch_emoji_image(emoji_char):
-    # Convert emoji character to Unicode code point
-    emoji_unicode = ''.join(f'{ord(c):x}' for c in emoji_char)
-    
-    # Create the emoji image URL using Twemoji's CDN
-    emoji_url = f"https://twemoji.maxcdn.com/v/latest/72x72/{emoji_unicode}.png"
-
-    try:
-        response = requests.get(emoji_url)
-        if response.status_code == 200:
-            img = Image.open(BytesIO(response.content))
-            return img
-    except Exception as e:
-        print(f"Failed to fetch emoji image for {emoji_char}: {e}")
 async def create_leaderboard_image():
     WIDTH = 800  # Image width
     HEIGHT = 600  # Image height
