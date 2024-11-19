@@ -346,10 +346,10 @@ async def update_leaderboard():
         # Create the embed message
         embed = discord.Embed(
             title="🏆 Live Daily Leaderboard 🏆",
-            description="Here are the top players for today! Check the leaderboard to see if you're in the top 10!",
+            description="The leaderboard is live! Will you find yourself in the top 10 today?"
             color=discord.Color.gold()
         )
-        embed.set_footer(text="Go to your server profile > Change Nickname to see yourself on the leaderboard!")
+        embed.set_footer(text="`To update your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.`")
         
         # Set the rotating trophy GIF as the thumbnail
         embed.set_thumbnail(url=trophy_gif_url)
