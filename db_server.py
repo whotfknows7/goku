@@ -35,8 +35,6 @@ cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_activity ON user_activity
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_boosts ON xp_boost_cooldowns (user_id)')
 
 conn.commit()
-cursor.execute("DELETE FROM user_xp WHERE user_id = ?", (user_id,))
-cursor.connection.commit()
 
 # Function to update user XP with transaction management
 def update_user_xp(user_id, total_xp):
