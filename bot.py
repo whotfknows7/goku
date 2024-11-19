@@ -208,7 +208,7 @@ async def create_leaderboard_image():
     HEIGHT = 600  # Image height
     PADDING = 10  # Padding for layout
 
-    img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
+    img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 0))  # Transparent background (alpha=0)
     draw = ImageDraw.Draw(img)
 
     # Download and load the primary font (TT Fors Trial Bold)
@@ -269,7 +269,7 @@ async def create_leaderboard_image():
 
             # Render rank text
             rank_text = f"#{rank}"
-            rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
+                 bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
@@ -345,7 +345,7 @@ async def update_leaderboard():
 
         # Create the embed message
         embed = discord.Embed(
-            title="🏆 Yappers of the day 🏆",
+            title="🏆 YAPPERS OF THE DAY! 🏆",
             description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
             color=discord.Color.gold()
         )
