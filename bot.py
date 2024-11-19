@@ -100,9 +100,8 @@ async def on_message(message):
     update_user_xp(user_id, total_xp)
     track_activity(user_id)
 
-    # Activity burst check
+        # Activity burst check
     check_activity_burst(user_id)
-
     await bot.process_commands(message)
 
 # Function to create a rounded mask for profile pictures
@@ -112,32 +111,25 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
     draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)  # Adjusted radius
     return mask
 
-  
+# Function to round the corners of a profile picture
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
     img_pfp = img_pfp.convert('RGBA')
-    
     # Create a rounded mask with the size of the image
     mask = create_rounded_mask(img_pfp.size)
-    
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
-
 async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
-
 async def get_member(user_id):
     try:
         guild = bot.get_guild(GUILD_ID)
-
         if not guild:
             logger.error(f"Guild with ID {GUILD_ID} not found")
             return None
-
         member = await guild.fetch_member(user_id)
-
         if member:
             nickname = member.nick if member.nick else member.name
             avatar_url = member.avatar_url if member.avatar_url else None
@@ -146,9 +138,9 @@ async def get_member(user_id):
             # If member is not found, delete their data from the database
             delete_user_data(user_id)  # Clean up the data
             return None
-
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
+
 # Ensure the emoji directory exists
 if not os.path.exists(EMOJI_DIR):
     os.makedirs(EMOJI_DIR)
@@ -157,12 +149,9 @@ def fetch_emoji_image(emoji_char):
     emoji_unicode = format(ord(emoji_char), 'x')
     emoji_filename = f"{emoji_unicode}.png"
     emoji_image_path = os.path.join(EMOJI_DIR, emoji_filename)
-
     if os.path.exists(emoji_image_path):
         try:
             img = Image.open(emoji_image_path).convert("RGBA")
-            # Remove or comment the print statement below
-            # print(f"Loaded emoji image: {emoji_image_path}")
             return img
         except Exception as e:
             logging.error(f"Failed to open image for emoji {emoji_char}: {e}")
