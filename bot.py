@@ -303,20 +303,13 @@ async def create_leaderboard_image():
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 8  # Slightly move nickname text upwards
             render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
 
-            # Calculate space between nickname and second separator, taking emojis into account
-            nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
-            emoji_gap = 12  # Extra space if there are emojis
-            second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
-
-            # Render the second "|" separator with outline
+                        # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
                               second_separator_text, font=font, fill=outline_color)
-
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
 
             # Render the XP points with space
