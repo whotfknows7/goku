@@ -8,13 +8,13 @@ import requests
 from io import BytesIO
 import os
 
-# Database functions import
 from db_server import (
     update_user_xp,
     track_activity,
     check_boost_cooldown,
     update_boost_cooldown,
-    check_activity_burst
+    check_activity_burst,
+    delete_user_data  # Import the cleanup function
 )
 
 # Error tracking
@@ -25,8 +25,6 @@ import emoji
 
 def is_emoji(char):
     return emoji.is_emoji(char)
-# Your Emoji API Key
-API_KEY = "9c048170c0da8b7bed769145176af3419008d0bb"
 
 # Rollbar initialization
 rollbar.init(
@@ -131,26 +129,32 @@ async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
-
 async def get_member(user_id):
     try:
         guild = bot.get_guild(GUILD_ID)
+
         if not guild:
             logger.error(f"Guild with ID {GUILD_ID} not found")
             return None
 
         member = await guild.fetch_member(user_id)
-        nickname = member.nick if member.nick else member.name
-        avatar_url = member.avatar_url if member.avatar_url else None
-        return nickname, avatar_url
+
+        if member:
+            nickname = member.nick if member.nick else member.name
+            avatar_url = member.avatar_url if member.avatar_url else None
+            return nickname, avatar_url
+        else:
+            # If member is not found, delete their data from the database
+            delete_user_data(user_id)  # Clean up the data
+            return None
 
     except discord.HTTPException as e:
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
+
     except Exception as e:
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
-
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
@@ -319,15 +323,6 @@ async def create_leaderboard_image():
             # Ensure that users with 0 points are shown as having 1 point
             if xp == 0:
                 xp = 1  # Replace 0 with 1 for display
-
-            # Render the XP points with space
-            points_text = f"XP: {int(xp)} Pts"
-            points_bbox = draw.textbbox((0, 0), points_text, font=font)
-            points_height = points_bbox[3] - points_bbox[1]
-            points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
-            points_position = second_separator_position + 20
-
-            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"

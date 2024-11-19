@@ -35,7 +35,14 @@ cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_activity ON user_activity
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_boosts ON xp_boost_cooldowns (user_id)')
 
 conn.commit()
-
+def delete_user_data(user_id):
+    try:
+        cursor.execute("DELETE FROM user_xp WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM activity WHERE user_id = ?", (user_id,))
+        conn.commit()
+        print(f"Deleted data for user {user_id} who is no longer in the guild.")
+    except sqlite3.Error as e:
+        print(f"Error deleting user data for {user_id}: {e}")
 # Function to update user XP with transaction management
 def update_user_xp(user_id, total_xp):
     try:
