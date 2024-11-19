@@ -161,23 +161,6 @@ def update_boost_cooldown(user_id):
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error updating boost cooldown for user {user_id}: {e}\n")
 
-# Function to check activity bursts and handle XP boosts
-def check_activity_burst(user_id, message=None):
-    print(f"Checking activity burst for user {user_id}...")  # Log the check
-    current_time = time.time()
-    cursor.execute("SELECT last_activity FROM user_activity WHERE user_id = ?", (user_id,))
-    result = cursor.fetchone()
-
-    if result:
-        last_activity = result[0]
-        if current_time - last_activity < 300:  # Activity burst within 5 minutes
-            print(f"User {user_id} has an activity burst. Last activity was {current_time - last_activity} seconds ago.")
-            return True
-        else:
-            print(f"User {user_id} does not have an activity burst. Last activity was {current_time - last_activity} seconds ago.")
-    else:
-        print(f"No activity found for user {user_id}.")
-    return False
 def cleanup_invalid_users():
     try:
         cursor.execute("BEGIN TRANSACTION;")
