@@ -327,7 +327,6 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
@@ -341,15 +340,24 @@ async def update_leaderboard():
         # Generate the leaderboard image
         image = await create_leaderboard_image()
 
-        # Ensure image is passed as a file, not trying to log or serialize the object
-        global leaderboard_message
+        # Create the embed message
+        embed = discord.Embed(
+            title="🏆 Live Daily Leaderboard 🏆",
+            description="Here are the top players for today! Check the leaderboard to see if you're in the top 10!",
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text="Go to your server profile > Change Nickname to see yourself on the leaderboard!")
 
+        # Attach the image to the embed
+        embed.set_image(url="attachment://leaderboard.png")
+
+        # Send the embed and image
+        global leaderboard_message
         if leaderboard_message:
             # Delete the previous message if it exists
             await leaderboard_message.delete()
 
-        # Send the new leaderboard message from scratch
-        leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
+        leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
 
     except discord.HTTPException as e:
         if e.status == 429:
@@ -362,6 +370,7 @@ async def update_leaderboard():
 
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
+
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
