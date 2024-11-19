@@ -352,7 +352,7 @@ async def update_leaderboard():
 
         # Create the embed message
         embed = discord.Embed(
-            title="🏆 YAPPERS OF THE DAY! 🏆",
+            title="🏆 YAPPERS OF THE DAY!",
             description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
             color=discord.Color.gold()
         )
