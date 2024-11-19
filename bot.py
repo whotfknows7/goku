@@ -202,7 +202,6 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
 
                 # Update position for the next emoji
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
-
 async def create_leaderboard_image():
 
     WIDTH = 800  # Image width
@@ -273,7 +272,6 @@ async def create_leaderboard_image():
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
-
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Calculate width for separators and nickname
@@ -283,12 +281,14 @@ async def create_leaderboard_image():
             # Render the first "|" separator with outline
             first_separator_text = "|"
             first_separator_y_position = rank_y_position
-            outline_width = 2
+            outline_width = 1  # Reduced outline width
             outline_color = "black"
+
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
                               first_separator_text, font=font, fill=outline_color)
+
             draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
             # Render the nickname with emojis
@@ -304,10 +304,12 @@ async def create_leaderboard_image():
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
+
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
                               second_separator_text, font=font, fill=outline_color)
+
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
 
             # Render the XP points with space
