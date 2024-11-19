@@ -25,6 +25,8 @@ import emoji
 
 def is_emoji(char):
     return emoji.is_emoji(char)
+# Your Emoji API Key
+API_KEY = "9c048170c0da8b7bed769145176af3419008d0bb"
 
 # Rollbar initialization
 rollbar.init(
@@ -317,6 +319,15 @@ async def create_leaderboard_image():
             # Ensure that users with 0 points are shown as having 1 point
             if xp == 0:
                 xp = 1  # Replace 0 with 1 for display
+
+            # Render the XP points with space
+            points_text = f"XP: {int(xp)} Pts"
+            points_bbox = draw.textbbox((0, 0), points_text, font=font)
+            points_height = points_bbox[3] - points_bbox[1]
+            points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
+            points_position = second_separator_position + 20
+
+            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
