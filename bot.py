@@ -281,9 +281,12 @@ async def create_leaderboard_image():
             stroke_width = 2  # Increase the outline width here
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=stroke_width, stroke_fill="black")
             
-                        # Calculate width for separators and nickname
+            # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
-            first_separator_position = PADDING + 65 + rank_width + 5
+
+            # Slightly decrease the gap between rank number and the first separator
+            first_separator_position = PADDING + 65 + rank_width + 10  # Decreased gap by changing +15 to +10
+
 
             # Render the first "|" separator with outline
             first_separator_text = "|"
@@ -317,14 +320,14 @@ async def create_leaderboard_image():
             if xp == 0:
                 xp = 1  # Replace 0 with 1 for display
 
-# Render the XP points with space
-points_text = f"XP: {int(xp)} Pts"
-points_bbox = draw.textbbox((0, 0), points_text, font=font)
-points_height = points_bbox[3] - points_bbox[1]
-points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
-points_position = second_separator_position + 20
+            # Render the XP points with space
+            points_text = f"XP: {int(xp)} Pts"
+            points_bbox = draw.textbbox((0, 0), points_text, font=font)
+            points_height = points_bbox[3] - points_bbox[1]
+            points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
+            points_position = second_separator_position + 20
 
-draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
+            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
@@ -363,7 +366,7 @@ async def update_leaderboard():
             description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
             color=discord.Color.gold()
         )
-        embed.set_footer(text="`To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.`")
+        embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
         
         # Set the rotating trophy GIF as the thumbnail
         embed.set_thumbnail(url=trophy_gif_url)
