@@ -116,17 +116,13 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
 
 
 # Function to round the corners of a profile picture
-
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
     img_pfp = img_pfp.convert('RGBA')
-    
     # Create a rounded mask with the size of the image
     mask = create_rounded_mask(img_pfp.size)
-    
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
-
 async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
@@ -176,29 +172,24 @@ def fetch_emoji_image(emoji_char):
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
 
-def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
-
+def render_nickname_with_emoji_images(draw, img, nickname, position, font, rank_color, emoji_size=28):
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
-    # Increase outline thickness
-    stroke_width = 2  # Increased stroke width for thicker outline
-
-    # Draw regular text first with outline
-    draw.text(position, text_part, font=font, fill="white", stroke_width=stroke_width, stroke_fill="black")
+    # Draw regular text with rank-specific color
+    draw.text(position, text_part, font=font, fill=rank_color, stroke_width=1, stroke_fill="black")
 
     # Get the bounding box of the regular text to place emojis next to it
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
     text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
 
     # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + text_width + 5, position[1])  # No vertical offset, emojis are aligned with the text
+    emoji_position = (position[0] + text_width + 5, position[1])
 
     # Loop through each character in the emoji part and render it as an image
     for char in emoji_part:
         if emoji.is_emoji(char):  # Ensure it's an emoji
             emoji_img = fetch_emoji_image(char)  # Fetch the emoji image from local folder
-
             if emoji_img:
                 emoji_img = emoji_img.resize((emoji_size, emoji_size))  # Resize to fit the text
 
@@ -208,13 +199,13 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
                 # Update position for the next emoji
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
 
+# Function to create leaderboard image
 async def create_leaderboard_image():
-
     WIDTH = 800  # Image width
     HEIGHT = 600  # Image height
     PADDING = 10  # Padding for layout
 
-    img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 0))  # Transparent background (alpha=0)
+    img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 255))  # Set background color to black
     draw = ImageDraw.Draw(img)
 
     # Download and load the primary font (TT Fors Trial Bold)
@@ -236,6 +227,13 @@ async def create_leaderboard_image():
         3: "#CD7F32",  # Bronze for Rank 3
     }
 
+    # Text color for the top 3 ranks
+    rank_text_colors = {
+        1: "#00FFFF",  # Aqua for Rank 1
+        2: "#32CD32",  # Green Grass for Rank 2
+        3: "#FF00FF",  # Magenta for Rank 3
+    }
+
     y_position = PADDING
     top_users = await fetch_top_users_with_xp()  # Example function to fetch users
 
@@ -244,8 +242,8 @@ async def create_leaderboard_image():
         draw.text((PADDING, PADDING), "No users found", font=font, fill="white")
     else:
         for rank, (user_id, xp) in enumerate(top_users, 1):
-
             member = await get_member(user_id)  # Example function to fetch member details
+
             if not member:
                 continue
 
@@ -265,7 +263,7 @@ async def create_leaderboard_image():
             try:
                 response = requests.get(avatar_url)
                 img_pfp = Image.open(BytesIO(response.content))
-                img_pfp = img_pfp.resize((57, 58))  # Resize PFP to 57x57
+                img_pfp = img_pfp.resize((57, 57))  # Resize PFP to 57x57
                 img_pfp = round_pfp(img_pfp)  # Apply rounded corners to the PFP
             except Exception as e:
                 logging.error(f"Failed to fetch avatar for user {user_id}: {e}")
@@ -273,14 +271,15 @@ async def create_leaderboard_image():
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-            # Render rank text
+            # Render rank text with specific color for the top 3 ranks
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
-            rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
-            stroke_width = 2  # Increase the outline width here
-            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=stroke_width, stroke_fill="black")
-            
+            rank_y_position = y_position + (57 - rank_height) // 2 - 5  # Centered with 5px upward offset
+
+            rank_text_color = rank_text_colors.get(rank, "white")  # Default to white if not top 3
+            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill=rank_text_color, stroke_width=1, stroke_fill="black")
+
             # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
             first_separator_position = PADDING + 65 + rank_width + 5
@@ -288,20 +287,18 @@ async def create_leaderboard_image():
             # Render the first "|" separator with outline
             first_separator_text = "|"
             first_separator_y_position = rank_y_position
-            outline_width = 1  # Reduced outline width
+            outline_width = 2
             outline_color = "black"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
                               first_separator_text, font=font, fill=outline_color)
-
             draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
-            # Render the nickname with emojis
+            # Render the nickname with emojis and rank-specific color
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
-            nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 8  # Slightly move nickname text upwards
-            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font)
+            nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
+            render_nickname_with_emoji_images(draw, img, nickname, (first_separator_position + 20, nickname_y_position), font, rank_text_color)
 
             # Calculate space between nickname and second separator, taking emojis into account
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
@@ -311,22 +308,20 @@ async def create_leaderboard_image():
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
                               second_separator_text, font=font, fill=outline_color)
-
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
 
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
             points_height = points_bbox[3] - points_bbox[1]
-            points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
+            points_y_position = y_position + (57 - points_height) // 2 - 5  # Centered with 5px upward offset
             points_position = second_separator_position + 20
-            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=2, stroke_fill="black")  # Increased stroke width
-            
+            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
+
             y_position += 60  # Space for next row of text
 
     img_binary = BytesIO()
@@ -334,6 +329,7 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
@@ -347,30 +343,15 @@ async def update_leaderboard():
         # Generate the leaderboard image
         image = await create_leaderboard_image()
 
-        # URL of the rotating trophy GIF
-        trophy_gif_url = "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif?ex=673dfa1f&is=673ca89f&hm=1145fd075163bb2888f473ce5ab667b35475e4afbaf427bdcfb459793d7efd8c&"  # Replace this with the actual URL of your GIF
-
-        # Create the embed message
-        embed = discord.Embed(
-            title="🏆 YAPPERS OF THE DAY!",
-            description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
-            color=discord.Color.gold()
-        )
-        embed.set_footer(text="`To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.`")
-        
-        # Set the rotating trophy GIF as the thumbnail
-        embed.set_thumbnail(url=trophy_gif_url)
-
-        # Attach the image to the embed
-        embed.set_image(url="attachment://leaderboard.png")
-
-        # Send the embed and image
+        # Ensure image is passed as a file, not trying to log or serialize the object
         global leaderboard_message
+
         if leaderboard_message:
             # Delete the previous message if it exists
             await leaderboard_message.delete()
 
-        leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
+        # Send the new leaderboard message from scratch
+        leaderboard_message = await channel.send(file=discord.File(image, filename="leaderboard.png"))
 
     except discord.HTTPException as e:
         if e.status == 429:
@@ -383,7 +364,6 @@ async def update_leaderboard():
 
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
-
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
