@@ -25,8 +25,6 @@ import emoji
 
 def is_emoji(char):
     return emoji.is_emoji(char)
-# Your Emoji API Key
-API_KEY = "9c048170c0da8b7bed769145176af3419008d0bb"
 
 # Rollbar initialization
 rollbar.init(
