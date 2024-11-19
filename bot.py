@@ -281,21 +281,19 @@ async def create_leaderboard_image():
             stroke_width = 2  # Increase the outline width here
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=stroke_width, stroke_fill="black")
             
-            # Calculate width for separators and nickname
+                        # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
             first_separator_position = PADDING + 65 + rank_width + 5
 
             # Render the first "|" separator with outline
             first_separator_text = "|"
             first_separator_y_position = rank_y_position
-            outline_width = 1  # Reduced outline width
+            outline_width = 2
             outline_color = "black"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
                               first_separator_text, font=font, fill=outline_color)
-
             draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
 
             # Render the nickname with emojis
@@ -307,17 +305,26 @@ async def create_leaderboard_image():
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
             emoji_gap = 12  # Extra space if there are emojis
             second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
-
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
-
             for x_offset in range(-outline_width, outline_width + 1):
                 for y_offset in range(-outline_width, outline_width + 1):
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
                               second_separator_text, font=font, fill=outline_color)
-
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
+            # Ensure that users with 0 points are shown as having 1 point
+            if xp == 0:
+                xp = 1  # Replace 0 with 1 for display
+
+# Render the XP points with space
+points_text = f"XP: {int(xp)} Pts"
+points_bbox = draw.textbbox((0, 0), points_text, font=font)
+points_height = points_bbox[3] - points_bbox[1]
+points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
+points_position = second_separator_position + 20
+
+draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
 
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
@@ -352,7 +359,7 @@ async def update_leaderboard():
 
         # Create the embed message
         embed = discord.Embed(
-            title="🏆 YAPPERS OF THE DAY!",
+            title="🏆  YAPPERS OF THE DAY!",
             description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
             color=discord.Color.gold()
         )
