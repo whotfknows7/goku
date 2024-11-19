@@ -112,9 +112,7 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
     draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)  # Adjusted radius
     return mask
 
-
-# Function to round the corners of a profile picture
-
+  
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
     img_pfp = img_pfp.convert('RGBA')
@@ -149,22 +147,8 @@ async def get_member(user_id):
             delete_user_data(user_id)  # Clean up the data
             return None
 
-# Function to delete user data from the database
-def delete_user_data(user_id):
-    try:
-        cursor.execute("DELETE FROM user_xp WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM user_activity WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
-        conn.commit()
-    except sqlite3.Error as e:
-        print(f"Error deleting data for user {user_id}: {e}")
-        # Optionally, log the error to a file
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error deleting data for user {user_id}: {e}\n")
-
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
-
 # Ensure the emoji directory exists
 if not os.path.exists(EMOJI_DIR):
     os.makedirs(EMOJI_DIR)
