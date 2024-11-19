@@ -14,9 +14,9 @@ from db_server import (
     track_activity,
     check_boost_cooldown,
     update_boost_cooldown,
-    check_activity_burst,
-    delete_user_data  # Import the cleanup function
+    check_activity_burst
 )
+
 # Error tracking
 import rollbar
 import rollbar.contrib.flask  # Only if you're using Flask integration
@@ -131,7 +131,6 @@ async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
-
 async def get_member(user_id):
     try:
         guild = bot.get_guild(GUILD_ID)
@@ -142,28 +141,28 @@ async def get_member(user_id):
 
         member = await guild.fetch_member(user_id)
 
-        if member:
-            nickname = member.nick if member.nick else member.name
-            avatar_url = member.avatar_url if member.avatar_url else None
-            return nickname, avatar_url
-        else:
-            # If member is not found, delete their data from the database
-            delete_user_data(user_id)  # Clean up the data
+        if member is None:  # User is not in the guild
+            # Delete user data from the database if they are no longer in the guild
+            from db_server import cursor
+            cursor.execute("DELETE FROM user_xp WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM user_activity WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
+            cursor.connection.commit()
+            logger.info(f"User {user_id} has left the guild. Data deleted from the database.")
             return None
 
-# Function to delete user data from the database
-def delete_user_data(user_id):
-    try:
-        cursor.execute("DELETE FROM user_xp WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM user_activity WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
-        conn.commit()
-    except sqlite3.Error as e:
-        print(f"Error deleting data for user {user_id}: {e}")
-        # Optionally, log the error to a file
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error deleting data for user {user_id}: {e}\n")
+        nickname = member.nick if member.nick else member.name
+        avatar_url = member.avatar_url if member.avatar_url else None
 
+        return nickname, avatar_url
+
+    except discord.HTTPException as e:
+        logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
+        return None
+
+    except Exception as e:
+        logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
+        return None
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
