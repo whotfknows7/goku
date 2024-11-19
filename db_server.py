@@ -73,10 +73,14 @@ def track_activity(user_id):
 boost_cooldown_cache = {}
 
 def check_boost_cooldown(user_id):
+    print(f"Checking boost cooldown for user {user_id}...")  # Log the check
     if user_id in boost_cooldown_cache:
         last_boost_time = boost_cooldown_cache[user_id]
         if time.time() - last_boost_time < 300:  # 5-minute cooldown
+            print(f"User {user_id} is on cooldown. Last boost was {last_boost_time} seconds ago.")
             return False
+        else:
+            print(f"User {user_id} is off cooldown.")
     else:
         cursor.execute("SELECT last_boost_time FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
         result = cursor.fetchone()
@@ -84,9 +88,11 @@ def check_boost_cooldown(user_id):
             last_boost_time = result[0]
             boost_cooldown_cache[user_id] = last_boost_time
             if time.time() - last_boost_time < 300:
+                print(f"User {user_id} is on cooldown. Last boost was {last_boost_time} seconds ago.")
                 return False
+            else:
+                print(f"User {user_id} is off cooldown.")
     return True
-
 
 # Function to update the XP boost cooldown
 def update_boost_cooldown(user_id):
@@ -95,14 +101,16 @@ def update_boost_cooldown(user_id):
         current_time = time.time()
         cursor.execute("INSERT OR REPLACE INTO xp_boost_cooldowns (user_id, last_boost_time) VALUES (?, ?)", (user_id, current_time))
         conn.commit()
+        print(f"Updated boost cooldown for user {user_id}. New boost time: {current_time}")  # Log the update
     except sqlite3.Error as e:
         conn.rollback()
         print(f"Error updating boost cooldown for user {user_id}: {e}")
-        # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error updating boost cooldown for user {user_id}: {e}\n")
+
 # Function to check activity bursts and handle XP boosts
 def check_activity_burst(user_id, message=None):
+    print(f"Checking activity burst for user {user_id}...")  # Log the check
     current_time = time.time()
     cursor.execute("SELECT last_activity FROM user_activity WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
@@ -110,7 +118,65 @@ def check_activity_burst(user_id, message=None):
     if result:
         last_activity = result[0]
         if current_time - last_activity < 300:  # Activity burst within 5 minutes
+            print(f"User {user_id} has an activity burst. Last activity was {current_time - last_activity} seconds ago.")
             return True
+        else:
+            print(f"User {user_id} does not have an activity burst. Last activity was {current_time - last_activity} seconds ago.")
+    else:
+        print(f"No activity found for user {user_id}.")
+    return False
+def check_boost_cooldown(user_id):
+    print(f"Checking boost cooldown for user {user_id}...")  # Log the check
+    if user_id in boost_cooldown_cache:
+        last_boost_time = boost_cooldown_cache[user_id]
+        if time.time() - last_boost_time < 300:  # 5-minute cooldown
+            print(f"User {user_id} is on cooldown. Last boost was {last_boost_time} seconds ago.")
+            return False
+        else:
+            print(f"User {user_id} is off cooldown.")
+    else:
+        cursor.execute("SELECT last_boost_time FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
+        result = cursor.fetchone()
+        if result:
+            last_boost_time = result[0]
+            boost_cooldown_cache[user_id] = last_boost_time
+            if time.time() - last_boost_time < 300:
+                print(f"User {user_id} is on cooldown. Last boost was {last_boost_time} seconds ago.")
+                return False
+            else:
+                print(f"User {user_id} is off cooldown.")
+    return True
+
+# Function to update the XP boost cooldown
+def update_boost_cooldown(user_id):
+    try:
+        cursor.execute("BEGIN TRANSACTION;")
+        current_time = time.time()
+        cursor.execute("INSERT OR REPLACE INTO xp_boost_cooldowns (user_id, last_boost_time) VALUES (?, ?)", (user_id, current_time))
+        conn.commit()
+        print(f"Updated boost cooldown for user {user_id}. New boost time: {current_time}")  # Log the update
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error updating boost cooldown for user {user_id}: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error updating boost cooldown for user {user_id}: {e}\n")
+
+# Function to check activity bursts and handle XP boosts
+def check_activity_burst(user_id, message=None):
+    print(f"Checking activity burst for user {user_id}...")  # Log the check
+    current_time = time.time()
+    cursor.execute("SELECT last_activity FROM user_activity WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+
+    if result:
+        last_activity = result[0]
+        if current_time - last_activity < 300:  # Activity burst within 5 minutes
+            print(f"User {user_id} has an activity burst. Last activity was {current_time - last_activity} seconds ago.")
+            return True
+        else:
+            print(f"User {user_id} does not have an activity burst. Last activity was {current_time - last_activity} seconds ago.")
+    else:
+        print(f"No activity found for user {user_id}.")
     return False
 def cleanup_invalid_users():
     try:
