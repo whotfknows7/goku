@@ -279,7 +279,6 @@ async def create_leaderboard_image():
 
             rank_text_color = rank_text_colors.get(rank, "white")  # Default to white if not top 3
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill=rank_text_color, stroke_width=1, stroke_fill="black")
-
             # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
             first_separator_position = PADDING + 65 + rank_width + 5
@@ -294,7 +293,6 @@ async def create_leaderboard_image():
                     draw.text((first_separator_position + x_offset, first_separator_y_position + y_offset),
                               first_separator_text, font=font, fill=outline_color)
             draw.text((first_separator_position, first_separator_y_position), first_separator_text, font=font, fill="white")
-
             # Render the nickname with emojis and rank-specific color
             nickname_bbox = draw.textbbox((0, 0), nickname, font=font)
             nickname_y_position = y_position + (57 - (nickname_bbox[3] - nickname_bbox[1])) // 2 - 5  # Centered with 5px upward offset
@@ -304,7 +302,6 @@ async def create_leaderboard_image():
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
             emoji_gap = 12  # Extra space if there are emojis
             second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
-
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
@@ -313,7 +310,6 @@ async def create_leaderboard_image():
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
                               second_separator_text, font=font, fill=outline_color)
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
-
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
