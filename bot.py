@@ -177,11 +177,15 @@ def fetch_emoji_image(emoji_char):
         return None
 
 def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
+
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
-    # Draw regular text first
-    draw.text(position, text_part, font=font, fill="white", stroke_width=1, stroke_fill="black")
+    # Increase outline thickness
+    stroke_width = 2  # Increased stroke width for thicker outline
+
+    # Draw regular text first with outline
+    draw.text(position, text_part, font=font, fill="white", stroke_width=stroke_width, stroke_fill="black")
 
     # Get the bounding box of the regular text to place emojis next to it
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
@@ -194,6 +198,7 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
     for char in emoji_part:
         if emoji.is_emoji(char):  # Ensure it's an emoji
             emoji_img = fetch_emoji_image(char)  # Fetch the emoji image from local folder
+
             if emoji_img:
                 emoji_img = emoji_img.resize((emoji_size, emoji_size))  # Resize to fit the text
 
@@ -202,6 +207,7 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
 
                 # Update position for the next emoji
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
+
 async def create_leaderboard_image():
 
     WIDTH = 800  # Image width
@@ -269,11 +275,12 @@ async def create_leaderboard_image():
 
             # Render rank text
             rank_text = f"#{rank}"
-                 bbox = draw.textbbox((0, 0), rank_text, font=font)
+            rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
             rank_height = rank_bbox[3] - rank_bbox[1]  # Height of rank text
             rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
-            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
-
+            stroke_width = 2  # Increase the outline width here
+            draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=stroke_width, stroke_fill="black")
+            
             # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
             first_separator_position = PADDING + 65 + rank_width + 5
@@ -318,8 +325,8 @@ async def create_leaderboard_image():
             points_height = points_bbox[3] - points_bbox[1]
             points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
             points_position = second_separator_position + 20
-            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=1, stroke_fill="black")
-
+            draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=2, stroke_fill="black")  # Increased stroke width
+            
             y_position += 60  # Space for next row of text
 
     img_binary = BytesIO()
