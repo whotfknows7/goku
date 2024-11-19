@@ -340,6 +340,9 @@ async def update_leaderboard():
         # Generate the leaderboard image
         image = await create_leaderboard_image()
 
+        # URL of the rotating trophy GIF
+        trophy_gif_url = "https://example.com/rotating_trophy.gif"  # Replace this with the actual URL of your GIF
+
         # Create the embed message
         embed = discord.Embed(
             title="🏆 Live Daily Leaderboard 🏆",
@@ -347,6 +350,9 @@ async def update_leaderboard():
             color=discord.Color.gold()
         )
         embed.set_footer(text="Go to your server profile > Change Nickname to see yourself on the leaderboard!")
+        
+        # Set the rotating trophy GIF as the thumbnail
+        embed.set_thumbnail(url=trophy_gif_url)
 
         # Attach the image to the embed
         embed.set_image(url="attachment://leaderboard.png")
