@@ -341,7 +341,7 @@ async def update_leaderboard():
         image = await create_leaderboard_image()
 
         # URL of the rotating trophy GIF
-        trophy_gif_url = "https://example.com/rotating_trophy.gif"  # Replace this with the actual URL of your GIF
+        trophy_gif_url = "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif?ex=673dfa1f&is=673ca89f&hm=1145fd075163bb2888f473ce5ab667b35475e4afbaf427bdcfb459793d7efd8c&"  # Replace this with the actual URL of your GIF
 
         # Create the embed message
         embed = discord.Embed(
