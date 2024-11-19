@@ -1,2 +1,0 @@
-Error updating XP for user 12345: cannot start a transaction within a transaction
-Error updating XP for user 12345: cannot start a transaction within a transaction
