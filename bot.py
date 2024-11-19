@@ -14,9 +14,9 @@ from db_server import (
     track_activity,
     check_boost_cooldown,
     update_boost_cooldown,
-    check_activity_burst
+    check_activity_burst,
+    delete_user_data  # Import the cleanup function
 )
-
 # Error tracking
 import rollbar
 import rollbar.contrib.flask  # Only if you're using Flask integration
@@ -132,10 +132,6 @@ async def fetch_top_users_with_xp():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
 
-# Open database connection
-conn = sqlite3.connect('database.db', check_same_thread=False)
-cursor = conn.cursor()
-
 async def get_member(user_id):
     try:
         guild = bot.get_guild(GUILD_ID)
@@ -146,24 +142,14 @@ async def get_member(user_id):
 
         member = await guild.fetch_member(user_id)
 
-        if member is None:  # User is not in the guild
-            # Delete user data from the database if they are no longer in the guild
-            delete_user_data(user_id)  # Pass user_id to the delete function
-            logger.info(f"User {user_id} has left the guild. Data deleted from the database.")
+        if member:
+            nickname = member.nick if member.nick else member.name
+            avatar_url = member.avatar_url if member.avatar_url else None
+            return nickname, avatar_url
+        else:
+            # If member is not found, delete their data from the database
+            delete_user_data(user_id)  # Clean up the data
             return None
-
-        nickname = member.nick if member.nick else member.name
-        avatar_url = member.avatar_url if member.avatar_url else None
-
-        return nickname, avatar_url
-
-    except discord.HTTPException as e:
-        logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
-        return None
-
-    except Exception as e:
-        logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
-        return None
 
 # Function to delete user data from the database
 def delete_user_data(user_id):
