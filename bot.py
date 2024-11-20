@@ -102,7 +102,7 @@ async def fetch_top_users_with_xp():
   # Function to refresh the cache every 2 minutes
 @tasks.loop(seconds=120)
 async def refresh_cache():
-    logger.info("Refreshing member cache...")
+    #logger.info("Refreshing member cache...")
     
     # Fetch the top 10 users with XP
     top_users = await fetch_top_users_with_xp()
@@ -279,12 +279,6 @@ async def create_leaderboard_image():
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
 
-            # Draw rank, nickname, and xp (you can adjust positioning as needed)
-            draw.text((PADDING + 60, y_position + 10), f"Rank {rank}: {nickname}", font=font, fill="white")
-            draw.text((WIDTH - PADDING - 120, y_position + 10), f"{xp} XP", font=font, fill="white")
-
-            y_position += 60  # Move down for the next rank
-
             # Render rank text
             rank_text = f"#{rank}"
             rank_bbox = draw.textbbox((0, 0), rank_text, font=font)
@@ -330,7 +324,7 @@ async def create_leaderboard_image():
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
 
             # Render the XP points with space
-            points_text = f"XP: {format_points(int(xp))} Pts"
+            points_text = f"XP: {int(xp)} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
             points_height = points_bbox[3] - points_bbox[1]
             points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
