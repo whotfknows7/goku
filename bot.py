@@ -33,8 +33,11 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 # Placeholder for the leaderboard message
 leaderboard_message = None
 
-# Cache for user data
+# Cache for storing nickname and avatar URL of users
 user_cache = {}
+
+# Cache expiration time in seconds (2 minutes)
+CACHE_EXPIRATION_TIME = 120
 
 # Function to refresh the cache
 async def refresh_user_cache():
