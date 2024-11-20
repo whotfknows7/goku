@@ -47,6 +47,7 @@ def is_emoji(char):
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
     update_leaderboard.start()
+    
 # Bot event for incoming messages
 @bot.event
 async def on_message(message):
@@ -94,6 +95,7 @@ async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
+  
 async def get_member(user_id):
     try:
         guild = bot.get_guild(GUILD_ID)
@@ -120,6 +122,7 @@ async def get_member(user_id):
     except Exception as e:
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
+      
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
@@ -176,6 +179,11 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
 
                 # Update position for the next emoji
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
+                
+def format_points(points):
+    if points >= 1000:
+        return f"{points / 1000:.1f}k"  # Formats as 'X.Xk'
+    return str(points)
 
 async def create_leaderboard_image():
 
@@ -287,7 +295,7 @@ async def create_leaderboard_image():
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
 
             # Render the XP points with space
-            points_text = f"XP: {int(xp)} Pts"
+            points_text = f"XP: {format_points(int(xp))} Pts"
             points_bbox = draw.textbbox((0, 0), points_text, font=font)
             points_height = points_bbox[3] - points_bbox[1]
             points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
@@ -301,6 +309,7 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
+  
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
