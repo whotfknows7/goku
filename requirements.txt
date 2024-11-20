@@ -49,7 +49,6 @@ PyGObject==3.20.0
 python-apt==1.1.0b1+ubuntu0.16.4.12
 requests==2.26.0
 requests-oauthlib==1.3.0
-rollbar==1.0.0
 rsa==4.7.2
 schedule==1.2.2
 shutit==1.0.173

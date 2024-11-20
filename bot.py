@@ -8,17 +8,8 @@ import requests
 from io import BytesIO
 import os
 from db_server import update_user_xp, delete_user_data  # Import necessary functions only
-import rollbar
 import re
 import emoji
-
-# Rollbar initialization
-rollbar.init(
-    access_token='cfd2554cc40741fca49e3d8d6502f039',
-    environment='testenv',
-    code_version='1.0'
-)
-rollbar.report_message('Rollbar is configured correctly', 'info')
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -326,7 +317,7 @@ async def update_leaderboard():
 
         # Create the embed message
         embed = discord.Embed(
-            title="🏆  YAPPERS OF THE DAY!",
+            title="🏆  Yappers of the day",
             description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
             color=discord.Color.gold()
         )
