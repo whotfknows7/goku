@@ -38,51 +38,26 @@ user_cache = {}
 
 # Cache expiration time in seconds (2 minutes)
 CACHE_EXPIRATION_TIME = 120
+from discord.ext import tasks
 
-# Function to refresh the cache
-async def refresh_user_cache():
+# Task to refresh the cache every 2 minutes
+@tasks.loop(minutes=2)
+async def refresh_member_cache():
     try:
-        guild = bot.get_guild(GUILD_ID)
-        if not guild:
-            logger.error(f"Guild with ID {GUILD_ID} not found.")
-            return
+        # Fetch the top users from the leaderboard or wherever the user IDs are stored
+        top_users = await fetch_top_users_with_xp()  # Assuming this function returns user IDs
+        for user_id, _ in top_users:
+            await get_member(user_id)  # Refresh the cache with current data
+        logger.info("Member cache refreshed")
 
-        # Fetch top 10 users
-        from db_server import cursor
-        cursor.execute("SELECT user_id FROM user_xp ORDER BY xp DESC LIMIT 10")
-        top_users = [row[0] for row in cursor.fetchall()]
-
-        # Update cache
-        for user_id in top_users:
-            try:
-                member = await guild.fetch_member(user_id)
-                nickname = member.nick or member.name
-                avatar_url = member.display_avatar.url
-                user_cache[user_id] = {"nickname": nickname, "avatar_url": avatar_url}
-            except discord.HTTPException as e:
-                logger.warning(f"Failed to fetch member {user_id}: {e}")
-                delete_user_data(user_id)  # Clean up user data if inaccessible
-
-        logger.info("User cache refreshed.")
     except Exception as e:
-        logger.error(f"Error refreshing user cache: {e}")
+        logger.error(f"Error refreshing member cache: {e}")
 
-# Bot event when ready
+# Start the cache refresh task when the bot is ready
 @bot.event
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
-    await refresh_user_cache()
-    refresh_cache.start()
-    update_leaderboard.start()
-
-# Cache refresh task
-@tasks.loop(seconds=CACHE_REFRESH_INTERVAL)
-async def refresh_cache():
-    await refresh_user_cache()
-
-# Function to fetch user data from cache
-def get_user_from_cache(user_id):
-    return user_cache.get(user_id)
+    refresh_member_cache.start()  # Start refreshing member cache task
 
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
@@ -140,20 +115,24 @@ async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
-  
 async def get_member(user_id):
     try:
+        # Fetch the guild directly (no cross-check, only for your server)
         guild = bot.get_guild(GUILD_ID)
-
         if not guild:
             logger.error(f"Guild with ID {GUILD_ID} not found")
             return None
 
-        member = await guild.fetch_member(user_id)
-
+        member = guild.get_member(user_id)  # Fetch member from the cache first
         if member:
             nickname = member.nick if member.nick else member.name
             avatar_url = member.avatar_url if member.avatar_url else None
+            
+            # Update the cache with fresh data (no timestamp check needed)
+            user_cache[user_id] = {
+                "nickname": nickname,
+                "avatar_url": avatar_url
+            }
             return nickname, avatar_url
         else:
             # If member is not found, delete their data from the database
@@ -163,7 +142,7 @@ async def get_member(user_id):
     except discord.HTTPException as e:
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
-
+      
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
