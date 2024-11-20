@@ -204,7 +204,6 @@ def format_points(points):
     if points >= 1000:
         return f"{points / 1000:.1f}k"  # Formats as 'X.Xk'
     return str(points)
-
 async def create_leaderboard_image():
 
     WIDTH = 800  # Image width
@@ -241,12 +240,18 @@ async def create_leaderboard_image():
         draw.text((PADDING, PADDING), "Bruh sadly Noone is yapping", font=font, fill="white")
     else:
         for rank, (user_id, xp) in enumerate(top_users, 1):
+            # Check if the user's data is already cached
+            cached_data = user_cache.get(user_id)
 
-            member = await get_member(user_id)  # Example function to fetch member details
-            if not member:
-                continue
-
-            nickname, avatar_url = member
+            if cached_data:
+                # If data is in cache, use it
+                nickname, avatar_url = cached_data["nickname"], cached_data["avatar_url"]
+            else:
+                # If no cached data, fetch fresh data and update the cache
+                member = await get_member(user_id)  # This will update the cache as well
+                if not member:
+                    continue
+                nickname, avatar_url = member
 
             # Set background color based on rank
             rank_bg_color = rank_colors.get(rank, "#36393e")
@@ -269,6 +274,12 @@ async def create_leaderboard_image():
                 img_pfp = Image.new('RGBA', (57, 57), color=(128, 128, 128, 255))  # Default grey circle
 
             img.paste(img_pfp, (PADDING, y_position), img_pfp)  # Use the alpha mask when pasting
+
+            # Draw rank, nickname, and xp (you can adjust positioning as needed)
+            draw.text((PADDING + 60, y_position + 10), f"Rank {rank}: {nickname}", font=font, fill="white")
+            draw.text((WIDTH - PADDING - 120, y_position + 10), f"{xp} XP", font=font, fill="white")
+
+            y_position += 60  # Move down for the next rank
 
             # Render rank text
             rank_text = f"#{rank}"
