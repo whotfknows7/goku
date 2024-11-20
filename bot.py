@@ -37,13 +37,12 @@ leaderboard_message = None
 # Cache for member details
 user_cache = {}
 CACHE_TTL = 120  # Time-to-live (TTL) for the cache (in seconds)
-
-# Start the cache refresh task when the bot is ready
+# Start the cache refresh loop when the bot is ready
 @bot.event
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
-    refresh_member_cache.start()  # Start refreshing member cache task
-
+    refresh_cache.start()
+    update_leaderboard.start()  # Ensure your leaderboard update function is also running
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -100,7 +99,17 @@ async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
-  
+  # Function to refresh the cache every 2 minutes
+@tasks.loop(seconds=120)
+async def refresh_cache():
+    logger.info("Refreshing member cache...")
+    
+    # Fetch the top 10 users with XP
+    top_users = await fetch_top_users_with_xp()
+    
+    for user_id, _ in top_users:
+        await get_member(user_id)  # This will refresh the cache if needed
+
 async def get_member(user_id):
     current_time = time.time()
 
@@ -201,7 +210,6 @@ def format_points(points):
         return f"{points / 1000:.1f}k"  # Formats as 'X.Xk'
     return str(points)
 async def create_leaderboard_image():
-
     WIDTH = 800  # Image width
     HEIGHT = 600  # Image height
     PADDING = 10  # Padding for layout
@@ -246,7 +254,7 @@ async def create_leaderboard_image():
                 # If no cached data, fetch fresh data and update the cache
                 member = await get_member(user_id)  # This will update the cache as well
                 if not member:
-                    continue
+                    continue  # Skip if no member data
                 nickname, avatar_url = member
 
             # Set background color based on rank
@@ -284,13 +292,12 @@ async def create_leaderboard_image():
             rank_y_position = y_position + (57 - rank_height) // 2 - 8  # Slightly move text upwards (adjust -8 value)
             stroke_width = 2  # Increase the outline width here
             draw.text((PADDING + 65, rank_y_position), rank_text, font=font, fill="white", stroke_width=stroke_width, stroke_fill="black")
-            
+
             # Calculate width for separators and nickname
             rank_width = rank_bbox[2] - rank_bbox[0]
 
             # Slightly decrease the gap between rank number and the first separator
             first_separator_position = PADDING + 65 + rank_width + 10  # Decreased gap by changing +15 to +10
-
 
             # Render the first "|" separator with outline
             first_separator_text = "|"
@@ -312,6 +319,7 @@ async def create_leaderboard_image():
             nickname_width = nickname_bbox[2] - nickname_bbox[0]  # Get width of nickname text
             emoji_gap = 12  # Extra space if there are emojis
             second_separator_position = first_separator_position + 20 + nickname_width + emoji_gap  # Add space between nickname and second separator
+
             # Render the second "|" separator with outline
             second_separator_y_position = nickname_y_position
             second_separator_text = "|"
@@ -328,7 +336,7 @@ async def create_leaderboard_image():
             points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
             points_position = second_separator_position + 20
             draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=2, stroke_fill="black")  # Increased stroke width
-            
+
             y_position += 60  # Space for next row of text
 
     img_binary = BytesIO()
