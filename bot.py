@@ -33,25 +33,10 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 # Placeholder for the leaderboard message
 leaderboard_message = None
 
-# Cache for storing nickname and avatar URL of users
+
+# Cache for member details
 user_cache = {}
-
-# Cache expiration time in seconds (2 minutes)
-CACHE_EXPIRATION_TIME = 120
-from discord.ext import tasks
-
-# Task to refresh the cache every 2 minutes
-@tasks.loop(minutes=2)
-async def refresh_member_cache():
-    try:
-        # Fetch the top users from the leaderboard or wherever the user IDs are stored
-        top_users = await fetch_top_users_with_xp()  # Assuming this function returns user IDs
-        for user_id, _ in top_users:
-            await get_member(user_id)  # Refresh the cache with current data
-        logger.info("Member cache refreshed")
-
-    except Exception as e:
-        logger.error(f"Error refreshing member cache: {e}")
+CACHE_TTL = 120  # Time-to-live (TTL) for the cache (in seconds)
 
 # Start the cache refresh task when the bot is ready
 @bot.event
@@ -115,24 +100,35 @@ async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
+  
 async def get_member(user_id):
+    current_time = time.time()
+
+    # Check if the user is in the cache and if the cache is still valid
+    if user_id in user_cache and (current_time - user_cache[user_id]['timestamp'] < CACHE_TTL):
+        # Return cached nickname and avatar URL
+        return user_cache[user_id]['nickname'], user_cache[user_id]['avatar_url']
+
     try:
-        # Fetch the guild directly (no cross-check, only for your server)
         guild = bot.get_guild(GUILD_ID)
+
         if not guild:
             logger.error(f"Guild with ID {GUILD_ID} not found")
             return None
 
-        member = guild.get_member(user_id)  # Fetch member from the cache first
+        member = await guild.fetch_member(user_id)
+
         if member:
             nickname = member.nick if member.nick else member.name
             avatar_url = member.avatar_url if member.avatar_url else None
-            
-            # Update the cache with fresh data (no timestamp check needed)
+
+            # Cache the member data
             user_cache[user_id] = {
-                "nickname": nickname,
-                "avatar_url": avatar_url
+                'nickname': nickname,
+                'avatar_url': avatar_url,
+                'timestamp': current_time
             }
+
             return nickname, avatar_url
         else:
             # If member is not found, delete their data from the database
