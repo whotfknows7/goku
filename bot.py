@@ -30,6 +30,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # Regular expressions
 URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
 
+# Placeholder for the leaderboard message
+leaderboard_message = None
+
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -43,7 +46,7 @@ def is_emoji(char):
 @bot.event
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
-
+    update_leaderboard.start()
 # Bot event for incoming messages
 @bot.event
 async def on_message(message):
@@ -77,7 +80,6 @@ def create_rounded_mask(size, radius=10):  # Reduced the radius to 10 for less r
 
 
 # Function to round the corners of a profile picture
-
 def round_pfp(img_pfp):
     # Ensure the image is in RGBA mode to support transparency
     img_pfp = img_pfp.convert('RGBA')
