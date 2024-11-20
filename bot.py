@@ -119,10 +119,6 @@ async def get_member(user_id):
         logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
         return None
 
-    except Exception as e:
-        logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
-        return None
-      
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
@@ -218,7 +214,7 @@ async def create_leaderboard_image():
 
     if not top_users:
         # If no users fetched, display a message
-        draw.text((PADDING, PADDING), "No users found", font=font, fill="white")
+        draw.text((PADDING, PADDING), "Bruh sadly Noone is yapping", font=font, fill="white")
     else:
         for rank, (user_id, xp) in enumerate(top_users, 1):
 
@@ -328,7 +324,7 @@ async def update_leaderboard():
 
         # Create the embed message
         embed = discord.Embed(
-            title="🏆  Yappers of the day",
+            title="🏆  Yappers of the day!",
             description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
             color=discord.Color.gold()
         )
