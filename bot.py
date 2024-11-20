@@ -33,6 +33,54 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 # Placeholder for the leaderboard message
 leaderboard_message = None
 
+# Cache for user data
+user_cache = {}
+
+# Function to refresh the cache
+async def refresh_user_cache():
+    try:
+        guild = bot.get_guild(GUILD_ID)
+        if not guild:
+            logger.error(f"Guild with ID {GUILD_ID} not found.")
+            return
+
+        # Fetch top 10 users
+        from db_server import cursor
+        cursor.execute("SELECT user_id FROM user_xp ORDER BY xp DESC LIMIT 10")
+        top_users = [row[0] for row in cursor.fetchall()]
+
+        # Update cache
+        for user_id in top_users:
+            try:
+                member = await guild.fetch_member(user_id)
+                nickname = member.nick or member.name
+                avatar_url = member.display_avatar.url
+                user_cache[user_id] = {"nickname": nickname, "avatar_url": avatar_url}
+            except discord.HTTPException as e:
+                logger.warning(f"Failed to fetch member {user_id}: {e}")
+                delete_user_data(user_id)  # Clean up user data if inaccessible
+
+        logger.info("User cache refreshed.")
+    except Exception as e:
+        logger.error(f"Error refreshing user cache: {e}")
+
+# Bot event when ready
+@bot.event
+async def on_ready():
+    logger.info(f"Bot logged in as {bot.user.name}")
+    await refresh_user_cache()
+    refresh_cache.start()
+    update_leaderboard.start()
+
+# Cache refresh task
+@tasks.loop(seconds=CACHE_REFRESH_INTERVAL)
+async def refresh_cache():
+    await refresh_user_cache()
+
+# Function to fetch user data from cache
+def get_user_from_cache(user_id):
+    return user_cache.get(user_id)
+
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -42,12 +90,6 @@ def count_custom_emojis(content):
 def is_emoji(char):
     return emoji.is_emoji(char)
 
-# Bot event when ready
-@bot.event
-async def on_ready():
-    logger.info(f"Bot logged in as {bot.user.name}")
-    update_leaderboard.start()
-    
 # Bot event for incoming messages
 @bot.event
 async def on_message(message):
@@ -238,7 +280,7 @@ async def create_leaderboard_image():
             try:
                 response = requests.get(avatar_url)
                 img_pfp = Image.open(BytesIO(response.content))
-                img_pfp = img_pfp.resize((57, 58))  # Resize PFP to 57x57
+                img_pfp = img_pfp.resize((57, 58))  # Resize PFP to 57x58
                 img_pfp = round_pfp(img_pfp)  # Apply rounded corners to the PFP
             except Exception as e:
                 logging.error(f"Failed to fetch avatar for user {user_id}: {e}")
