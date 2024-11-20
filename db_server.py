@@ -5,6 +5,7 @@ import time
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
 
+# Create the user_xp table
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS user_xp (
         user_id TEXT PRIMARY KEY,
@@ -12,37 +13,22 @@ cursor.execute('''
     )
 ''')
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS user_activity (
-        user_id INTEGER PRIMARY KEY,
-        last_activity REAL NOT NULL CHECK(last_activity > 0)  -- Ensure valid activity timestamps
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS xp_boost_cooldowns (
-        user_id INTEGER PRIMARY KEY,
-        last_boost_time REAL NOT NULL CHECK(last_boost_time > 0)  -- Ensure valid boost timestamps
-    )
-''')
-
 conn.commit()
 
-
-# Create indexes on frequently queried columns (user_id)
+# Create an index on user_id for faster queries
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_xp ON user_xp (user_id)')
-cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_activity ON user_activity (user_id)')
-cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_boosts ON xp_boost_cooldowns (user_id)')
 
 conn.commit()
+
+# Function to delete user data
 def delete_user_data(user_id):
     try:
         cursor.execute("DELETE FROM user_xp WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM activity WHERE user_id = ?", (user_id,))
         conn.commit()
         print(f"Deleted data for user {user_id} who is no longer in the guild.")
     except sqlite3.Error as e:
         print(f"Error deleting user data for {user_id}: {e}")
+
 # Function to update user XP with transaction management
 def update_user_xp(user_id, total_xp):
     try:
@@ -56,130 +42,20 @@ def update_user_xp(user_id, total_xp):
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error updating XP for user {user_id}: {e}\n")
 
-def track_activity(user_id):
-    try:
-        cursor.execute("BEGIN TRANSACTION;")
-        current_time = time.time()
-        cursor.execute("INSERT OR REPLACE INTO user_activity (user_id, last_activity) VALUES (?, ?)", (user_id, current_time))
-        conn.commit()
-    except sqlite3.Error as e:
-        conn.rollback()
-        print(f"Error tracking activity for user {user_id}: {e}")
-        # Optionally, log the error to a file
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error tracking activity for user {user_id}: {e}\n")
-
-# Function to handle XP boost cooldown
-boost_cooldown_cache = {}
-
-def check_boost_cooldown(user_id):
-    print(f"Checking boost cooldown for user {user_id}...")  # Log the check
-    if user_id in boost_cooldown_cache:
-        last_boost_time = boost_cooldown_cache[user_id]
-        if time.time() - last_boost_time < 300:  # 5-minute cooldown
-            print(f"User {user_id} is on cooldown. Last boost was {last_boost_time} seconds ago.")
-            return False
-        else:
-            print(f"User {user_id} is off cooldown.")
-    else:
-        cursor.execute("SELECT last_boost_time FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
-        result = cursor.fetchone()
-        if result:
-            last_boost_time = result[0]
-            boost_cooldown_cache[user_id] = last_boost_time
-            if time.time() - last_boost_time < 300:
-                print(f"User {user_id} is on cooldown. Last boost was {last_boost_time} seconds ago.")
-                return False
-            else:
-                print(f"User {user_id} is off cooldown.")
-    return True
-
-# Function to update the XP boost cooldown
-def update_boost_cooldown(user_id):
-    try:
-        cursor.execute("BEGIN TRANSACTION;")
-        current_time = time.time()
-        cursor.execute("INSERT OR REPLACE INTO xp_boost_cooldowns (user_id, last_boost_time) VALUES (?, ?)", (user_id, current_time))
-        conn.commit()
-        print(f"Updated boost cooldown for user {user_id}. New boost time: {current_time}")  # Log the update
-    except sqlite3.Error as e:
-        conn.rollback()
-        print(f"Error updating boost cooldown for user {user_id}: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error updating boost cooldown for user {user_id}: {e}\n")
-
-# Function to check activity bursts and handle XP boosts
-def check_activity_burst(user_id, message=None):
-    print(f"Checking activity burst for user {user_id}...")  # Log the check
-    current_time = time.time()
-    cursor.execute("SELECT last_activity FROM user_activity WHERE user_id = ?", (user_id,))
-    result = cursor.fetchone()
-
-    if result:
-        last_activity = result[0]
-        if current_time - last_activity < 300:  # Activity burst within 5 minutes
-            print(f"User {user_id} has an activity burst. Last activity was {current_time - last_activity} seconds ago.")
-            return True
-        else:
-            print(f"User {user_id} does not have an activity burst. Last activity was {current_time - last_activity} seconds ago.")
-    else:
-        print(f"No activity found for user {user_id}.")
-    return False
-def check_boost_cooldown(user_id):
-    print(f"Checking boost cooldown for user {user_id}...")  # Log the check
-    if user_id in boost_cooldown_cache:
-        last_boost_time = boost_cooldown_cache[user_id]
-        if time.time() - last_boost_time < 300:  # 5-minute cooldown
-            print(f"User {user_id} is on cooldown. Last boost was {last_boost_time} seconds ago.")
-            return False
-        else:
-            print(f"User {user_id} is off cooldown.")
-    else:
-        cursor.execute("SELECT last_boost_time FROM xp_boost_cooldowns WHERE user_id = ?", (user_id,))
-        result = cursor.fetchone()
-        if result:
-            last_boost_time = result[0]
-            boost_cooldown_cache[user_id] = last_boost_time
-            if time.time() - last_boost_time < 300:
-                print(f"User {user_id} is on cooldown. Last boost was {last_boost_time} seconds ago.")
-                return False
-            else:
-                print(f"User {user_id} is off cooldown.")
-    return True
-
-# Function to update the XP boost cooldown
-def update_boost_cooldown(user_id):
-    try:
-        cursor.execute("BEGIN TRANSACTION;")
-        current_time = time.time()
-        cursor.execute("INSERT OR REPLACE INTO xp_boost_cooldowns (user_id, last_boost_time) VALUES (?, ?)", (user_id, current_time))
-        conn.commit()
-        print(f"Updated boost cooldown for user {user_id}. New boost time: {current_time}")  # Log the update
-    except sqlite3.Error as e:
-        conn.rollback()
-        print(f"Error updating boost cooldown for user {user_id}: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error updating boost cooldown for user {user_id}: {e}\n")
-
+# Function to clean up invalid users
 def cleanup_invalid_users():
     try:
         cursor.execute("BEGIN TRANSACTION;")
-
         # Remove users with negative XP
         cursor.execute("DELETE FROM user_xp WHERE xp < 0")
-
-        # Remove users with invalid activity timestamps (older than 30 days)
-        cutoff_time = time.time() - (30 * 24 * 60 * 60)  # 30 days ago
-        cursor.execute("DELETE FROM user_activity WHERE last_activity < ?", (cutoff_time,))
-
         conn.commit()
-
     except sqlite3.Error as e:
         conn.rollback()
         print(f"Error during cleanup: {e}")
-        # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error during cleanup: {e}\n")
+
+# Function to check database integrity
 def check_database_integrity():
     try:
         cursor.execute("PRAGMA integrity_check;")
@@ -188,23 +64,21 @@ def check_database_integrity():
             print("Database integrity check passed.")
         else:
             print(f"Database integrity check failed: {result}")
-            # Log the issue if needed
             with open("error_log.txt", "a") as log_file:
                 log_file.write(f"Database integrity check failed: {result}\n")
     except sqlite3.Error as e:
         print(f"Error performing integrity check: {e}")
-        # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error performing integrity check: {e}\n")
+
+# Function to bulk update XP
 def update_bulk_xp(user_xp_data):
     try:
         cursor.execute("BEGIN TRANSACTION;")
-        # Prepare the data for batch insertion
         cursor.executemany("INSERT OR REPLACE INTO user_xp (user_id, xp) VALUES (?, ?)", user_xp_data)
         conn.commit()
     except sqlite3.Error as e:
         conn.rollback()
         print(f"Error bulk updating XP: {e}")
-        # Optionally, log the error to a file
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error bulk updating XP: {e}\n")

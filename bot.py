@@ -7,24 +7,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
 from io import BytesIO
 import os
-
-from db_server import (
-    update_user_xp,
-    track_activity,
-    check_boost_cooldown,
-    update_boost_cooldown,
-    check_activity_burst,
-    delete_user_data  # Import the cleanup function
-)
-
-# Error tracking
+from db_server import update_user_xp, delete_user_data  # Import necessary functions only
 import rollbar
-import rollbar.contrib.flask  # Only if you're using Flask integration
 import re
 import emoji
-
-def is_emoji(char):
-    return emoji.is_emoji(char)
 
 # Rollbar initialization
 rollbar.init(
@@ -50,33 +36,22 @@ intents.members = True
 # Bot setup
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Constants
-BOOST_DURATION = 300  # 5 minutes in seconds
-BOOST_COOLDOWN = 300  # 5 minutes in seconds
-MESSAGE_LIMIT = 10
-TIME_WINDOW = 300  # 5-minute window for burst
-
 # Regular expressions
 URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
-
-# Placeholder for the leaderboard message
-leaderboard_message = None
-
-# Constants for image dimensions
-WIDTH, HEIGHT = 702, 610  # Set image size
-PADDING = 10  # Space from the edges of the image
-
 
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
     return len(re.findall(custom_emoji_pattern, content))
 
+# Function to determine if a character is an emoji
+def is_emoji(char):
+    return emoji.is_emoji(char)
+
 # Bot event when ready
 @bot.event
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
-    update_leaderboard.start()
 
 # Bot event for incoming messages
 @bot.event
@@ -85,23 +60,20 @@ async def on_message(message):
         return
 
     user_id = message.author.id
+
     # Remove URLs and non-alphanumeric characters except spaces
     filtered_content = re.sub(URL_REGEX, "", message.content)
     filtered_content = ''.join(c for c in filtered_content if c.isalnum() or c.isspace())
 
     # XP Calculation
-    character_xp = len(filtered_content.replace(" ", "")) * 0.1
+    character_xp = len(filtered_content.replace(" ", "")) * 1  # 1 XP per alphanumeric character
     custom_emoji_count = count_custom_emojis(message.content)
     unicode_emoji_count = sum(1 for c in message.content if is_emoji(c))
-    emoji_xp = (custom_emoji_count + unicode_emoji_count) * 0.5
+    emoji_xp = (custom_emoji_count + unicode_emoji_count) * 5  # 5 XP per emoji
     total_xp = character_xp + emoji_xp
 
     # Update user data
     update_user_xp(user_id, total_xp)
-    track_activity(user_id)
-
-    # Activity burst check
-    check_activity_burst(user_id)
 
     await bot.process_commands(message)
 
@@ -320,9 +292,6 @@ async def create_leaderboard_image():
                     draw.text((second_separator_position + x_offset, second_separator_y_position + y_offset),
                               second_separator_text, font=font, fill=outline_color)
             draw.text((second_separator_position, second_separator_y_position), second_separator_text, font=font, fill="white")
-            # Ensure that users with 0 points are shown as having 1 point
-            if xp == 0:
-                xp = 1  # Replace 0 with 1 for display
 
             # Render the XP points with space
             points_text = f"XP: {int(xp)} Pts"
