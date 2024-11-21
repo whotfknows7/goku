@@ -10,7 +10,7 @@ import os
 from db_server import update_user_xp, delete_user_data  # Import necessary functions only
 import re
 import emoji
-from typing import List, Dict
+
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -30,11 +30,10 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # Regular expressions
 URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
 
-previous_top_10 = []  # Cache for storing the previous top 10 users
+# Placeholder for the leaderboard message
 leaderboard_message = None
 cached_top_users = None  
 cached_image_path = "leaderboard.png"  
-current_top_10_user_ids = set()
 
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
@@ -94,17 +93,11 @@ def round_pfp(img_pfp):
     
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
-      
-async def fetch_top_users_with_xp() -> List[Dict]:
+
+async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
-    top_users = cursor.fetchall()
-    
-    # Update the set of top 10 user IDs
-    global current_top_10_user_ids
-    current_top_10_user_ids = {user['user_id'] for user in top_users}
-    
-    return top_users
+    return cursor.fetchall()
 
 # Function to download the font if not already cached
 def download_font():
@@ -146,22 +139,7 @@ async def get_member(user_id):
         else:
             logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
             return None
-@bot.event
-async def on_member_update(before, after):
-    global previous_top_10
-
-    # Check if the user is in the top 10
-    if before.id in current_top_10_user_ids:
-        # Detect nickname changes
-        if before.nick != after.nick:
-            logger.info(f"Nickname changed for {before.name}: {before.nick} -> {after.nick}")
-            await regenerate_leaderboard()
-
-        # Detect avatar changes
-        if before.avatar != after.avatar:
-            logger.info(f"Avatar changed for {before.name}.")
-            await regenerate_leaderboard()
-
+          
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
@@ -344,36 +322,9 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-  
-async def regenerate_leaderboard():
-    global cached_image_path, leaderboard_message
-
-    try:
-        # Regenerate leaderboard image
-        img_binary = await create_leaderboard_image()
-
-        # Save the new image
-        with open(cached_image_path, "wb") as f:
-            f.write(img_binary.getvalue())
-
-        # Fetch the channel
-        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-
-        if leaderboard_message:
-            # Delete the existing leaderboard message
-            await leaderboard_message.delete()
-
-        # Send the updated leaderboard image
-        leaderboard_message = await channel.send(file=discord.File(cached_image_path))
-
-    except Exception as e:
-        logger.error(f"Error regenerating leaderboard: {e}")
 
 @tasks.loop(seconds=20)
 async def update_leaderboard():
-    global previous_top_10
-    global leaderboard_message
-
     try:
         # Fetch the channel to send the leaderboard to
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
@@ -382,39 +333,11 @@ async def update_leaderboard():
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
-        # Fetch the current top 10 leaderboard data
-        current_top_10 = await fetch_top_users_with_xp()  # Use your database fetch function
-
-        # Ensure current_top_10 is a list of dictionaries or a comparable structure
-        if not isinstance(current_top_10, list):
-            logger.error("Fetched top 10 leaderboard data is not in the expected list format.")
-            return
-
-        # Compare with the previous top 10 to detect changes
-        if current_top_10 == previous_top_10:
-            logger.info("No changes detected in the leaderboard. Skipping update.")
-            
-            # Reuse the cached leaderboard image if no changes
-            if os.path.exists(LEADERBOARD_IMAGE_CACHE_PATH):
-                image = LEADERBOARD_IMAGE_CACHE_PATH
-            else:
-                logger.warning("No leaderboard image found in cache.")
-                return
-        else:
-            # Update the cached top 10
-            previous_top_10 = current_top_10
-
-            # Generate the new leaderboard image
-            image = await create_leaderboard_image()
-
-            # Save the new image to cache
-            with open(LEADERBOARD_IMAGE_CACHE_PATH, 'wb') as f:
-                f.write(image)
+        # Generate the leaderboard image
+        image = await create_leaderboard_image()
 
         # URL of the rotating trophy GIF
-        trophy_gif_url = (
-            "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif"
-        )  # Replace with the actual URL of your GIF
+        trophy_gif_url = "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif?ex=673dfa1f&is=673ca89f&hm=1145fd075163bb2888f473ce5ab667b35475e4afbaf427bdcfb459793d7efd8c&"  # Replace this with the actual URL of your GIF
 
         # Create the embed message
         embed = discord.Embed(
@@ -423,7 +346,7 @@ async def update_leaderboard():
             color=discord.Color.gold()
         )
         embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
-
+        
         # Set the rotating trophy GIF as the thumbnail
         embed.set_thumbnail(url=trophy_gif_url)
 
@@ -431,6 +354,7 @@ async def update_leaderboard():
         embed.set_image(url="attachment://leaderboard.png")
 
         # Send the embed and image
+        global leaderboard_message
         if leaderboard_message:
             # Delete the previous message if it exists
             await leaderboard_message.delete()
@@ -448,6 +372,7 @@ async def update_leaderboard():
 
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
+
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
