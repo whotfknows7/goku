@@ -32,7 +32,8 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 
 # Placeholder for the leaderboard message
 leaderboard_message = None
-
+# Define FONT_PATH globally
+FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 
 # Cache for member details
 user_cache = {}
@@ -110,6 +111,21 @@ async def refresh_cache():
     
     for user_id, _ in top_users:
         await get_member(user_id)  # This will refresh the cache if needed
+
+# Function to download the font if not already cached
+def download_font():
+    if not os.path.exists(FONT_PATH):
+        # If the font doesn't exist locally, download it
+        font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/TT%20Fors%20Trial%20Bold.ttf?v=1731866074399"
+        
+        response = requests.get(font_url)
+        
+        if response.status_code == 200:
+            with open(FONT_PATH, "wb") as f:
+                f.write(response.content)
+            logging.info(f"Font downloaded and cached at {FONT_PATH}")
+        else:
+            logging.error("Failed to download font. Using default font instead.")
 
 async def get_member(user_id):
     current_time = time.time()
@@ -210,7 +226,11 @@ def format_points(points):
     if points >= 1000:
         return f"{points / 1000:.1f}k"  # Formats as 'X.Xk'
     return str(points)
+  
 async def create_leaderboard_image():
+    # Download the font if it's not already cached
+    download_font()
+
     WIDTH = 800  # Image width
     HEIGHT = 600  # Image height
     PADDING = 10  # Padding for layout
@@ -218,16 +238,11 @@ async def create_leaderboard_image():
     img = Image.new("RGBA", (WIDTH, HEIGHT), color=(0, 0, 0, 0))  # Transparent background (alpha=0)
     draw = ImageDraw.Draw(img)
 
-    # Download and load the primary font (TT Fors Trial Bold)
-    font_url = "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/TT%20Fors%20Trial%20Bold.ttf?v=1731866074399"
-    response = requests.get(font_url)
-
-    if response.status_code == 200:
-        with open("TT Fors Trial Bold.ttf", "wb") as f:
-            f.write(response.content)
-        font = ImageFont.truetype("TT Fors Trial Bold.ttf", size=28)
-    else:
-        logging.error("Failed to download font. Using default font instead.")
+    try:
+        # Load the font from the local cache
+        font = ImageFont.truetype(FONT_PATH, size=28)
+    except IOError:
+        logging.error("Failed to load custom font. Using default font instead.")
         font = ImageFont.load_default()  # Fallback to default font
 
     # Rank-specific background colors
