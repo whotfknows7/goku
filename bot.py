@@ -126,7 +126,6 @@ def download_font():
             logging.info(f"Font downloaded and cached at {FONT_PATH}")
         else:
             logging.error("Failed to download font. Using default font instead.")
-
 async def get_member(user_id):
     current_time = time.time()
 
@@ -157,14 +156,19 @@ async def get_member(user_id):
 
             return nickname, avatar_url
         else:
-            # If member is not found, delete their data from the database
-            delete_user_data(user_id)  # Clean up the data
+            # If member is not found (i.e., they left the server), clean up the data
+            delete_user_data(user_id)  # Clean up the data from the database
             return None
 
     except discord.HTTPException as e:
-        logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
-        return None
-      
+        # Handle HTTP exceptions (e.g., member not found)
+        if e.code == 10007:  # Member not found
+            delete_user_data(user_id)  # Clean up data if user is not in the guild anymore
+            return None
+        else:
+            logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
+            return None
+
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
