@@ -34,16 +34,11 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 leaderboard_message = None
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
-
-# Cache for member details
-user_cache = {}
-CACHE_TTL = 120  # Time-to-live (TTL) for the cache (in seconds)
-# Start the cache refresh loop when the bot is ready
 @bot.event
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
-    refresh_cache.start()
     update_leaderboard.start()  # Ensure your leaderboard update function is also running
+
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
