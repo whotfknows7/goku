@@ -99,6 +99,7 @@ async def fetch_top_users_with_xp():
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
+
   # Function to refresh the cache every 2 minutes
 @tasks.loop(seconds=120)
 async def refresh_cache():
