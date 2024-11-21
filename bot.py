@@ -344,28 +344,30 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-
+  
 async def regenerate_leaderboard():
     global cached_image_path, leaderboard_message
 
-    # Regenerate leaderboard image
-    img_binary = await create_leaderboard_image()
+    try:
+        # Regenerate leaderboard image
+        img_binary = await create_leaderboard_image()
 
-    # Save the new image
-    with open(cached_image_path, "wb") as f:
-        f.write(img_binary.getvalue())
+        # Save the new image
+        with open(cached_image_path, "wb") as f:
+            f.write(img_binary.getvalue())
 
-    # Fetch the channel
-    channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+        # Fetch the channel
+        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
 
-    if leaderboard_message:
-        # Edit the existing message with the updated leaderboard
-        await leaderboard_message.delete()
-        leaderboard_message = None
+        if leaderboard_message:
+            # Delete the existing leaderboard message
+            await leaderboard_message.delete()
 
-    # Send the updated leaderboard image
-    leaderboard_message = await channel.send(file=discord.File(cached_image_path))
-    logger.info("Leaderboard updated and sent.")
+        # Send the updated leaderboard image
+        leaderboard_message = await channel.send(file=discord.File(cached_image_path))
+
+    except Exception as e:
+        logger.error(f"Error regenerating leaderboard: {e}")
 
 @tasks.loop(seconds=20)
 async def update_leaderboard():
@@ -383,16 +385,31 @@ async def update_leaderboard():
         # Fetch the current top 10 leaderboard data
         current_top_10 = await fetch_top_users_with_xp()  # Use your database fetch function
 
+        # Ensure current_top_10 is a list of dictionaries or a comparable structure
+        if not isinstance(current_top_10, list):
+            logger.error("Fetched top 10 leaderboard data is not in the expected list format.")
+            return
+
         # Compare with the previous top 10 to detect changes
         if current_top_10 == previous_top_10:
             logger.info("No changes detected in the leaderboard. Skipping update.")
-            return
+            
+            # Reuse the cached leaderboard image if no changes
+            if os.path.exists(LEADERBOARD_IMAGE_CACHE_PATH):
+                image = LEADERBOARD_IMAGE_CACHE_PATH
+            else:
+                logger.warning("No leaderboard image found in cache.")
+                return
+        else:
+            # Update the cached top 10
+            previous_top_10 = current_top_10
 
-        # Update the cached top 10
-        previous_top_10 = current_top_10
+            # Generate the new leaderboard image
+            image = await create_leaderboard_image()
 
-        # Generate the leaderboard image
-        image = await create_leaderboard_image()
+            # Save the new image to cache
+            with open(LEADERBOARD_IMAGE_CACHE_PATH, 'wb') as f:
+                f.write(image)
 
         # URL of the rotating trophy GIF
         trophy_gif_url = (
