@@ -32,8 +32,6 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 
 # Placeholder for the leaderboard message
 leaderboard_message = None
-previous_top_users = None
-cached_image = None
 
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
