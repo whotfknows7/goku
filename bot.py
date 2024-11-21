@@ -96,17 +96,6 @@ async def fetch_top_users_with_xp():
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
 
-  # Function to refresh the cache every 2 minutes
-@tasks.loop(seconds=120)
-async def refresh_cache():
-    #logger.info("Refreshing member cache...")
-    
-    # Fetch the top 10 users with XP
-    top_users = await fetch_top_users_with_xp()
-    
-    for user_id, _ in top_users:
-        await get_member(user_id)  # This will refresh the cache if needed
-
 # Function to download the font if not already cached
 def download_font():
     if not os.path.exists(FONT_PATH):
@@ -121,40 +110,24 @@ def download_font():
             logging.info(f"Font downloaded and cached at {FONT_PATH}")
         else:
             logging.error("Failed to download font. Using default font instead.")
+            
+# Function to fetch member details
 async def get_member(user_id):
-    current_time = time.time()
-
-    # Check if the user is in the cache and if the cache is still valid
-    if user_id in user_cache and (current_time - user_cache[user_id]['timestamp'] < CACHE_TTL):
-        # Return cached nickname and avatar URL
-        return user_cache[user_id]['nickname'], user_cache[user_id]['avatar_url']
-
     try:
         guild = bot.get_guild(GUILD_ID)
-
         if not guild:
             logger.error(f"Guild with ID {GUILD_ID} not found")
             return None
 
         member = await guild.fetch_member(user_id)
-
         if member:
             nickname = member.nick if member.nick else member.name
             avatar_url = member.avatar_url if member.avatar_url else None
-
-            # Cache the member data
-            user_cache[user_id] = {
-                'nickname': nickname,
-                'avatar_url': avatar_url,
-                'timestamp': current_time
-            }
-
             return nickname, avatar_url
         else:
             # If member is not found (i.e., they left the server), clean up the data
             delete_user_data(user_id)  # Clean up the data from the database
             return None
-
     except discord.HTTPException as e:
         # Handle HTTP exceptions (e.g., member not found)
         if e.code == 10007:  # Member not found
@@ -163,7 +136,7 @@ async def get_member(user_id):
         else:
             logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
             return None
-
+          
 # Directory where emoji images are stored
 EMOJI_DIR = "./emoji_images/"  # Update this to the correct path where emojis are saved
 
@@ -259,18 +232,11 @@ async def create_leaderboard_image():
         draw.text((PADDING, PADDING), "Bruh sadly Noone is yapping", font=font, fill="white")
     else:
         for rank, (user_id, xp) in enumerate(top_users, 1):
-            # Check if the user's data is already cached
-            cached_data = user_cache.get(user_id)
-
-            if cached_data:
-                # If data is in cache, use it
-                nickname, avatar_url = cached_data["nickname"], cached_data["avatar_url"]
-            else:
-                # If no cached data, fetch fresh data and update the cache
-                member = await get_member(user_id)  # This will update the cache as well
-                if not member:
-                    continue  # Skip if no member data
-                nickname, avatar_url = member
+            # Fetch fresh data for each user (no cache logic)
+            member = await get_member(user_id)
+            if not member:
+                continue  # Skip if no member data
+            nickname, avatar_url = member
 
             # Set background color based on rank
             rank_bg_color = rank_colors.get(rank, "#36393e")
@@ -345,7 +311,7 @@ async def create_leaderboard_image():
             points_y_position = y_position + (57 - points_height) // 2 - 8  # Slightly move XP text upwards
             points_position = second_separator_position + 20
             draw.text((points_position, points_y_position), points_text, font=font, fill="white", stroke_width=2, stroke_fill="black")  # Increased stroke width
-
+            
             y_position += 60  # Space for next row of text
 
     img_binary = BytesIO()
@@ -353,7 +319,7 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-  
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     try:
