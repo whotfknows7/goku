@@ -94,13 +94,32 @@ def round_pfp(img_pfp):
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
   
+# Cache for storing the previous top 10 users with more details (ID, XP, avatar URL, nickname)
+previous_top_10 = []  # A list of dictionaries to store user data
+
+# Modify the update function to save more information
 async def fetch_top_users_with_xp() -> List[Dict]:
     """
     Fetches the top 10 users based on XP from the database.
+    Returns a list of dictionaries containing user data (ID, XP, nickname, avatar URL).
     """
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
-    return cursor.fetchall()
+    top_users_data = cursor.fetchall()
+
+    # Create a list of dictionaries with user details (ID, XP, nickname, avatar URL)
+    users_with_details = []
+    for user_id, xp in top_users_data:
+        member = await get_member(user_id)
+        if member:
+            nickname, avatar_url = member
+            users_with_details.append({
+                'user_id': user_id,
+                'xp': xp,
+                'nickname': nickname,
+                'avatar_url': avatar_url
+            })
+    return users_with_details
   
 # Function to download the font if not already cached
 def download_font():
@@ -205,6 +224,26 @@ def format_points(points):
         return f"{points / 1000:.1f}k"  # Formats as 'X.Xk'
     return str(points)
   
+@bot.event
+async def on_member_update(before, after):
+    # If nickname or avatar changed, update the cache
+    if before.nick != after.nick or before.avatar_url != after.avatar_url:
+        user_id = after.id
+        nickname = after.nick if after.nick else after.name
+        avatar_url = after.avatar_url if after.avatar_url else None
+        
+        # Update profile in the cache
+        updated = False
+        for i, (uid, xp, av_url, _) in enumerate(previous_top_10):
+            if uid == user_id:
+                previous_top_10[i] = (uid, xp, avatar_url, nickname)  # Update profile info
+                updated = True
+                break
+        
+        # If the user isn't in the cached list, add them
+        if not updated:
+            previous_top_10.append((user_id, 0, avatar_url, nickname))  # Initialize with 0 XP
+
 async def create_leaderboard_image():
     # Download the font if it's not already cached
     download_font()
@@ -237,12 +276,11 @@ async def create_leaderboard_image():
         # If no users fetched, display a message
         draw.text((PADDING, PADDING), "Bruh sadly Noone is yapping", font=font, fill="white")
     else:
-        for rank, (user_id, xp) in enumerate(top_users, 1):
-            # Fetch fresh data for each user (no cache logic)
+         for rank, (user_id, xp, avatar_url, nickname) in enumerate(previous_top_10, 1):
+            # Fetch user profile if not already cached
+            if not avatar_url or not nickname:
             member = await get_member(user_id)
-            if not member:
-                continue  # Skip if no member data
-            nickname, avatar_url = member
+            nickname, avatar_url = member if member else (None, None)
 
             # Set background color based on rank
             rank_bg_color = rank_colors.get(rank, "#36393e")
@@ -339,8 +377,8 @@ async def update_leaderboard():
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
-        # Fetch the current top 10 leaderboard data
-        current_top_10 = await fetch_top_users_with_xp()  # Use your database fetch function
+        # Fetch the current top 10 leaderboard data with extra details
+        current_top_10 = await fetch_top_users_with_xp()
 
         # Compare with the previous top 10 to detect changes
         if current_top_10 == previous_top_10:
