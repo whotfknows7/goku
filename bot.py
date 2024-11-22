@@ -325,8 +325,8 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-  
 @tasks.loop(seconds=20)
+
 async def update_leaderboard():
     global previous_top_10
     global leaderboard_message
@@ -350,34 +350,62 @@ async def update_leaderboard():
         # Update the cached top 10
         previous_top_10 = current_top_10
 
-        # Generate the leaderboard image
-        image = await create_leaderboard_image()
+        # Track if any member in the top 10 has changed their avatar or nickname
+        avatar_or_nickname_changed = False
 
-        # URL of the rotating trophy GIF
-        trophy_gif_url = (
-            "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif"
-        )  # Replace with the actual URL of your GIF
+        # Check for changes in avatar or nickname for top 10 users
+        for user_id, _ in current_top_10:
+            member = await bot.fetch_user(user_id)
+            if member:
+                # Fetch the previous member info from previous_top_10 (cached)
+                previous_member = next((user for user in previous_top_10 if user[0] == user_id), None)
 
-        # Create the embed message
-        embed = discord.Embed(
-            title="🏆  Yappers of the day!",
-            description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
-            color=discord.Color.gold()
-        )
-        embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
+                if previous_member:
+                    # Compare avatar and nickname
+                    previous_member_avatar_url = previous_member[1]  # Assuming the avatar URL is the second element
+                    previous_member_nick = previous_member[2]  # Assuming nickname is the third element
 
-        # Set the rotating trophy GIF as the thumbnail
-        embed.set_thumbnail(url=trophy_gif_url)
+                    avatar_changed = member.avatar_url != previous_member_avatar_url
+                    nickname_changed = member.nick != previous_member_nick
 
-        # Attach the image to the embed
-        embed.set_image(url="attachment://leaderboard.png")
+                    if avatar_changed or nickname_changed:
+                        avatar_or_nickname_changed = True
 
-        # Send the embed and image
-        if leaderboard_message:
-            # Delete the previous message if it exists
-            await leaderboard_message.delete()
+        # If any changes in avatar/nickname are detected, regenerate leaderboard image
+        if avatar_or_nickname_changed or current_top_10 != previous_top_10:
+            logger.info("Changes detected in leaderboard or member details. Regenerating leaderboard image.")
 
-        leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
+            # Generate the leaderboard image
+            image = await create_leaderboard_image()
+
+            # URL of the rotating trophy GIF
+            trophy_gif_url = (
+                "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif"
+            )  # Replace with the actual URL of your GIF
+
+            # Create the embed message
+            embed = discord.Embed(
+                title="🏆  Yappers of the day!",
+                description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
+                color=discord.Color.gold()
+            )
+            embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
+
+            # Set the rotating trophy GIF as the thumbnail
+            embed.set_thumbnail(url=trophy_gif_url)
+
+            # Attach the image to the embed
+            embed.set_image(url="attachment://leaderboard.png")
+
+            # Send the embed and image
+            if leaderboard_message:
+                # Delete the previous message if it exists
+                await leaderboard_message.delete()
+
+            leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
+
+        else:
+            logger.info("No relevant changes detected in leaderboard members or their details.")
 
     except discord.HTTPException as e:
         if e.status == 429:
