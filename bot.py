@@ -276,11 +276,11 @@ async def create_leaderboard_image():
         # If no users fetched, display a message
         draw.text((PADDING, PADDING), "Bruh sadly Noone is yapping", font=font, fill="white")
     else:
-         for rank, (user_id, xp, avatar_url, nickname) in enumerate(previous_top_10, 1):
-            # Fetch user profile if not already cached
-            if not avatar_url or not nickname:
-            member = await get_member(user_id)
-            nickname, avatar_url = member if member else (None, None)
+        for rank, user in enumerate(top_users, 1):
+            user_id = user['user_id']
+            xp = user['xp']
+            avatar_url = user['avatar_url']
+            nickname = user['nickname']
 
             # Set background color based on rank
             rank_bg_color = rank_colors.get(rank, "#36393e")
