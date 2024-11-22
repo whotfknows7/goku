@@ -93,21 +93,21 @@ def round_pfp(img_pfp):
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
   
-# Cache for storing the previous top 10 users with more details (ID, XP, avatar URL, nickname)
-previous_top_10 = []  # A list of dictionaries to store user data
-
-# Modify the update function to save more information
 async def fetch_top_users_with_xp() -> List[Dict]:
     """
     Fetches the top 10 users based on XP from the database.
+    Updates the cache with the latest leaderboard.
     Returns a list of dictionaries containing user data (ID, XP, nickname, avatar URL).
     """
     from db_server import cursor
+
+    # Fetch the top 10 users based on XP
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     top_users_data = cursor.fetchall()
 
     # Create a list of dictionaries with user details (ID, XP, nickname, avatar URL)
     users_with_details = []
+
     for user_id, xp in top_users_data:
         member = await get_member(user_id)
         if member:
@@ -118,8 +118,13 @@ async def fetch_top_users_with_xp() -> List[Dict]:
                 'nickname': nickname,
                 'avatar_url': avatar_url
             })
+
+    # Update the global cache (previous_top_10)
+    global previous_top_10
+    previous_top_10 = users_with_details
+
     return users_with_details
-  
+
 # Function to download the font if not already cached
 def download_font():
     if not os.path.exists(FONT_PATH):
@@ -377,7 +382,7 @@ async def update_leaderboard():
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
-        # Fetch the current top 10 leaderboard data with extra details
+        # Fetch the current top 10 leaderboard data with extra details and update the cache
         current_top_10 = await fetch_top_users_with_xp()
 
         # Compare with the previous top 10 to detect changes
