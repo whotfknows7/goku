@@ -350,6 +350,9 @@ async def create_leaderboard_image():
     return img_binary
 
 async def update_leaderboard_image():
+     global previous_top_10
+   global leaderboard_message
+
     """
     Helper function to regenerate and update the leaderboard image.
     """
