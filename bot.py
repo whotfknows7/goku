@@ -32,7 +32,6 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 
 previous_top_10 = []  # Cache for storing the previous top 10 users
 leaderboard_message = None
-cached_top_users = None  
 cached_image_path = "leaderboard.png"  
 
 # Define FONT_PATH globally
@@ -281,6 +280,7 @@ async def create_leaderboard_image():
             xp = user['xp']
             avatar_url = user['avatar_url']
             nickname = user['nickname']
+
 
             # Set background color based on rank
             rank_bg_color = rank_colors.get(rank, "#36393e")
