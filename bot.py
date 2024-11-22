@@ -42,6 +42,18 @@ async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
     update_leaderboard.start()  # Ensure your leaderboard update function is also running
 
+@bot.event
+async def on_disconnect():
+    logger.warning("Bot got disconnected. Attempting to reconnect...")
+
+@bot.event
+async def on_resumed():
+    logger.info("Bot successfully reconnected and resumed.")
+
+@bot.event
+async def on_error(event, *args, **kwargs):
+    logger.error(f"An error occurred: {event}, {args}, {kwargs}")
+
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -462,4 +474,4 @@ async def announce_role_update(member, role_name):
         await channel.send(message)
 
 # Run bot with token
-bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI')  # Replace with your bot token
+bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)  # Replace with your bot token
