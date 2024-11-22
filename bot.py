@@ -32,7 +32,7 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 
 previous_top_10 = []  # Cache for storing the previous top 10 users
 leaderboard_message = None
-cached_top_users = None  
+cached_top_users = []  # Cache for the last updated top 10 users
 cached_image_path = "leaderboard.png"  
 
 # Define FONT_PATH globally
@@ -274,7 +274,7 @@ async def create_leaderboard_image():
 
     if not top_users:
         # If no users fetched, display a message
-        draw.text((PADDING, PADDING), "Bruh sadly Noone is yapping", font=font, fill="white")
+        draw.text((PADDING, PADDING), "Bruh sadly No-one is yapping yet...", font=font, fill="white")
     else:
         for rank, user in enumerate(top_users, 1):
             user_id = user['user_id']
@@ -363,10 +363,11 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-  
+
 @tasks.loop(seconds=20)
 async def update_leaderboard():
     global previous_top_10
+    global cached_top_users
     global leaderboard_message
 
     try:
@@ -382,11 +383,18 @@ async def update_leaderboard():
 
         # Compare with the previous top 10 to detect changes
         if current_top_10 == previous_top_10:
-            logger.info("No changes detected in the leaderboard. Skipping update.")
             return
 
         # Update the cached top 10
-        previous_top_10 = current_top_10
+        # If there's a previous cached top, add it to the old cache
+        if previous_top_10:
+            cached_top_users.append(previous_top_10)
+
+        # Maintain only two entries: current and previous
+        if len(cached_top_users) > 1:
+            cached_top_users.pop(0)  # Remove the oldest cached list
+        
+        previous_top_10 = current_top_10  # Update the current top 10
 
         # Generate the leaderboard image
         image = await create_leaderboard_image()
@@ -403,11 +411,9 @@ async def update_leaderboard():
             color=discord.Color.gold()
         )
         embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
-
-        # Set the rotating trophy GIF as the thumbnail
         embed.set_thumbnail(url=trophy_gif_url)
 
-        # Attach the image to the embed
+        # Set the rotating trophy GIF as the thumbnail
         embed.set_image(url="attachment://leaderboard.png")
 
         # Send the embed and image
