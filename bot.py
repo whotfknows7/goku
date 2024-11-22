@@ -101,6 +101,7 @@ async def fetch_top_users_with_xp() -> List[Dict]:
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
+  
 # Function to download the font if not already cached
 def download_font():
     if not os.path.exists(FONT_PATH):
