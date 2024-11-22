@@ -40,7 +40,7 @@ FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 @bot.event
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
-    update_leaderboard.start()  # Ensure your leaderboard update function is also running
+    update_leaderboard()  # Ensure your leaderboard update function is also running
 
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
@@ -100,8 +100,33 @@ async def fetch_top_users_with_xp() -> List[Dict]:
     """
     from db_server import cursor
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
-    return cursor.fetchall()
-  
+    top_users = cursor.fetchall()
+    logger.info(f"Fetched top users: {top_users}")  # Log the fetched data
+    return top_users
+
+@bot.event
+async def on_member_update(before, after):
+    """
+    Triggered when a member updates their nickname or avatar.
+    Regenerates the leaderboard image if the member is in the top 10.
+    """
+    # Fetch the top 10 users based on XP
+    top_users = await fetch_top_users_with_xp()
+
+    # Check if the updated user (after the change) is in the top 10
+    if any(user_id == after.id for user_id, _ in top_users):
+        
+        # Check if the avatar URL or nickname has changed
+        avatar_changed = before.avatar_url != after.avatar_url
+        nickname_changed = before.nick != after.nick
+
+        # If either avatar or nickname has changed, regenerate the leaderboard
+        if avatar_changed or nickname_changed:
+            logger.info(f"Changes detected for {after.name} (ID: {after.id}). Regenerating leaderboard image.")
+            
+            # Trigger a leaderboard update
+            await update_leaderboard_image()
+
 # Function to download the font if not already cached
 def download_font():
     if not os.path.exists(FONT_PATH):
@@ -324,9 +349,7 @@ async def create_leaderboard_image():
     img.save(img_binary, format="PNG")
     img_binary.seek(0)
 
-    return img_binary
-@tasks.loop(seconds=20)
-
+    return img_binary@tasks.loop(seconds=20)
 async def update_leaderboard():
     global previous_top_10
     global leaderboard_message
@@ -354,16 +377,32 @@ async def update_leaderboard():
         avatar_or_nickname_changed = False
 
         # Check for changes in avatar or nickname for top 10 users
-        for user_id, _ in current_top_10:
-            member = await bot.fetch_user(user_id)
+        for user in current_top_10:
+            if len(user) < 2:  # Ensure that each tuple has at least two elements
+                logger.warning(f"Skipping malformed leaderboard entry: {user}")
+                continue  # Skip any malformed data
+            
+            user_id, xp = user  # Safe unpack of the tuple
+
+            try:
+                member = await bot.fetch_user(user_id)
+            except discord.NotFound:
+                logger.warning(f"User with ID {user_id} not found.")
+                continue  # Skip if user is not found
+
             if member:
                 # Fetch the previous member info from previous_top_10 (cached)
                 previous_member = next((user for user in previous_top_10 if user[0] == user_id), None)
 
                 if previous_member:
-                    # Compare avatar and nickname
-                    previous_member_avatar_url = previous_member[1]  # Assuming the avatar URL is the second element
-                    previous_member_nick = previous_member[2]  # Assuming nickname is the third element
+                    # Ensure previous_member has the expected structure
+                    if len(previous_member) < 3:
+                        logger.warning(f"Skipping malformed previous member data: {previous_member}")
+                        continue
+                    
+                    # Assuming avatar URL is the second element and nickname is the third element
+                    previous_member_avatar_url = previous_member[1]
+                    previous_member_nick = previous_member[2]
 
                     avatar_changed = member.avatar_url != previous_member_avatar_url
                     nickname_changed = member.nick != previous_member_nick
@@ -390,8 +429,6 @@ async def update_leaderboard():
                 color=discord.Color.gold()
             )
             embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
-
-            # Set the rotating trophy GIF as the thumbnail
             embed.set_thumbnail(url=trophy_gif_url)
 
             # Attach the image to the embed
@@ -403,7 +440,6 @@ async def update_leaderboard():
                 await leaderboard_message.delete()
 
             leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
-
         else:
             logger.info("No relevant changes detected in leaderboard members or their details.")
 
