@@ -278,10 +278,9 @@ async def create_leaderboard_image():
     else:
          for rank, (user_id, xp, avatar_url, nickname) in enumerate(previous_top_10, 1):
             # Fetch user profile if not already cached
+            if not avatar_url or not nickname:
             member = await get_member(user_id)
-             if not member:
-                continue  # Skip if no member data
-            nickname, avatar_url = member
+            nickname, avatar_url = member if member else (None, None)
 
             # Set background color based on rank
             rank_bg_color = rank_colors.get(rank, "#36393e")
