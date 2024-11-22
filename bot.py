@@ -32,6 +32,7 @@ URL_REGEX = r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F]
 
 previous_top_10 = []  # Cache for storing the previous top 10 users
 leaderboard_message = None
+cached_top_users = None  
 cached_image_path = "leaderboard.png"  
 
 # Define FONT_PATH globally
@@ -96,34 +97,33 @@ def round_pfp(img_pfp):
 async def fetch_top_users_with_xp() -> List[Dict]:
     """
     Fetches the top 10 users based on XP from the database.
-    Updates the cache with the latest leaderboard.
-    Returns a list of dictionaries containing user data (ID, XP, nickname, avatar URL).
     """
     from db_server import cursor
-
-    # Fetch the top 10 users based on XP
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
-    top_users_data = cursor.fetchall()
+    return cursor.fetchall()
+  
+  @bot.event
+  async def on_member_update(before, after):
+    """
+    Triggered when a member updates their nickname or avatar.
+    Regenerates the leaderboard image if the member is in the top 10.
+    """
+    # Fetch the top 10 users based on XP
+    top_users = await fetch_top_users_with_xp()
 
-    # Create a list of dictionaries with user details (ID, XP, nickname, avatar URL)
-    users_with_details = []
+    # Check if the updated user (after the change) is in the top 10
+    if any(user_id == after.id for user_id, _ in top_users):
+        
+        # Check if the avatar URL or nickname has changed
+        avatar_changed = before.avatar_url != after.avatar_url
+        nickname_changed = before.nick != after.nick
 
-    for user_id, xp in top_users_data:
-        member = await get_member(user_id)
-        if member:
-            nickname, avatar_url = member
-            users_with_details.append({
-                'user_id': user_id,
-                'xp': xp,
-                'nickname': nickname,
-                'avatar_url': avatar_url
-            })
-
-    # Update the global cache (previous_top_10)
-    global previous_top_10
-    previous_top_10 = users_with_details
-
-    return users_with_details
+        # If either avatar or nickname has changed, regenerate the leaderboard
+        if avatar_changed or nickname_changed:
+            logger.info(f"Changes detected for {after.name} (ID: {after.id}). Regenerating leaderboard image.")
+            
+            # Trigger a leaderboard update
+            await update_leaderboard_image()
 
 # Function to download the font if not already cached
 def download_font():
@@ -228,26 +228,6 @@ def format_points(points):
         return f"{points / 1000:.1f}k"  # Formats as 'X.Xk'
     return str(points)
   
-@bot.event
-async def on_member_update(before, after):
-    # If nickname or avatar changed, update the cache
-    if before.nick != after.nick or before.avatar_url != after.avatar_url:
-        user_id = after.id
-        nickname = after.nick if after.nick else after.name
-        avatar_url = after.avatar_url if after.avatar_url else None
-        
-        # Update profile in the cache
-        updated = False
-        for i, (uid, xp, av_url, _) in enumerate(previous_top_10):
-            if uid == user_id:
-                previous_top_10[i] = (uid, xp, avatar_url, nickname)  # Update profile info
-                updated = True
-                break
-        
-        # If the user isn't in the cached list, add them
-        if not updated:
-            previous_top_10.append((user_id, 0, avatar_url, nickname))  # Initialize with 0 XP
-
 async def create_leaderboard_image():
     # Download the font if it's not already cached
     download_font()
@@ -280,12 +260,12 @@ async def create_leaderboard_image():
         # If no users fetched, display a message
         draw.text((PADDING, PADDING), "Bruh sadly Noone is yapping", font=font, fill="white")
     else:
-        for rank, user in enumerate(top_users, 1):
-            user_id = user['user_id']
-            xp = user['xp']
-            avatar_url = user['avatar_url']
-            nickname = user['nickname']
-
+        for rank, (user_id, xp) in enumerate(top_users, 1):
+            # Fetch fresh data for each user (no cache logic)
+            member = await get_member(user_id)
+            if not member:
+                continue  # Skip if no member data
+            nickname, avatar_url = member
 
             # Set background color based on rank
             rank_bg_color = rank_colors.get(rank, "#36393e")
@@ -368,12 +348,51 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
-  
-@tasks.loop(seconds=20)
-async def update_leaderboard():
-    global previous_top_10
-    global leaderboard_message
 
+async def update_leaderboard_image():
+    """
+    Helper function to regenerate and update the leaderboard image.
+    """
+    try:
+        # Fetch the current top 10 leaderboard data
+        current_top_10 = await fetch_top_users_with_xp()
+
+        # Generate the new leaderboard image
+        image = await create_leaderboard_image()
+
+        # URL of the rotating trophy GIF
+        trophy_gif_url = (
+            "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif"
+        )
+
+        # Create the embed message
+        embed = discord.Embed(
+            title="🏆  Yappers of the day!",
+            description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
+        embed.set_thumbnail(url=trophy_gif_url)
+
+        # Attach the image to the embed
+        embed.set_image(url="attachment://leaderboard.png")
+
+        # Fetch the leaderboard channel
+        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+        if not channel:
+            logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
+            return
+
+        # Delete the previous leaderboard message if it exists
+        global leaderboard_message
+        if leaderboard_message:
+            await leaderboard_message.delete()
+
+        # Send the new leaderboard message
+        leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
+    
+    except Exception as e:
+        logger.error(f"Error while updating leaderboard image: {e}")
     try:
         # Fetch the channel to send the leaderboard to
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
@@ -382,8 +401,8 @@ async def update_leaderboard():
             logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
             return
 
-        # Fetch the current top 10 leaderboard data with extra details and update the cache
-        current_top_10 = await fetch_top_users_with_xp()
+        # Fetch the current top 10 leaderboard data
+        current_top_10 = await fetch_top_users_with_xp()  # Use your database fetch function
 
         # Compare with the previous top 10 to detect changes
         if current_top_10 == previous_top_10:
