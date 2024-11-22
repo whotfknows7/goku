@@ -102,29 +102,6 @@ async def fetch_top_users_with_xp() -> List[Dict]:
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     return cursor.fetchall()
   
-  @bot.event
-  async def on_member_update(before, after):
-    """
-    Triggered when a member updates their nickname or avatar.
-    Regenerates the leaderboard image if the member is in the top 10.
-    """
-    # Fetch the top 10 users based on XP
-    top_users = await fetch_top_users_with_xp()
-
-    # Check if the updated user (after the change) is in the top 10
-    if any(user_id == after.id for user_id, _ in top_users):
-        
-        # Check if the avatar URL or nickname has changed
-        avatar_changed = before.avatar_url != after.avatar_url
-        nickname_changed = before.nick != after.nick
-
-        # If either avatar or nickname has changed, regenerate the leaderboard
-        if avatar_changed or nickname_changed:
-            logger.info(f"Changes detected for {after.name} (ID: {after.id}). Regenerating leaderboard image.")
-            
-            # Trigger a leaderboard update
-            await update_leaderboard_image()
-
 # Function to download the font if not already cached
 def download_font():
     if not os.path.exists(FONT_PATH):
@@ -348,51 +325,12 @@ async def create_leaderboard_image():
     img_binary.seek(0)
 
     return img_binary
+  
+@tasks.loop(seconds=20)
+async def update_leaderboard():
+    global previous_top_10
+    global leaderboard_message
 
-async def update_leaderboard_image():
-    """
-    Helper function to regenerate and update the leaderboard image.
-    """
-    try:
-        # Fetch the current top 10 leaderboard data
-        current_top_10 = await fetch_top_users_with_xp()
-
-        # Generate the new leaderboard image
-        image = await create_leaderboard_image()
-
-        # URL of the rotating trophy GIF
-        trophy_gif_url = (
-            "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif"
-        )
-
-        # Create the embed message
-        embed = discord.Embed(
-            title="🏆  Yappers of the day!",
-            description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
-            color=discord.Color.gold()
-        )
-        embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
-        embed.set_thumbnail(url=trophy_gif_url)
-
-        # Attach the image to the embed
-        embed.set_image(url="attachment://leaderboard.png")
-
-        # Fetch the leaderboard channel
-        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-        if not channel:
-            logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
-            return
-
-        # Delete the previous leaderboard message if it exists
-        global leaderboard_message
-        if leaderboard_message:
-            await leaderboard_message.delete()
-
-        # Send the new leaderboard message
-        leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
-    
-    except Exception as e:
-        logger.error(f"Error while updating leaderboard image: {e}")
     try:
         # Fetch the channel to send the leaderboard to
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
