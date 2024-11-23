@@ -1,5 +1,5 @@
 import sqlite3
-from db_server import fetch_top_10_users, save_daily_top_users
+from bot import fetch_top_10_users, save_daily_top_users
 conn = sqlite3.connect("clan_roles.db", check_same_thread=False)
 
 cursor = conn.cursor()
@@ -18,9 +18,7 @@ CREATE TABLE IF NOT EXISTS clan_role_2 (
 )
 """)
 conn.commit()
-
-
-                        
+                
 def save_to_clan_table(table_name, user_id, xp):
     """
     Save the user_id and XP to the specified clan role table.

@@ -460,6 +460,23 @@ async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
 
+def fetch_top_10_users():
+    """
+    Fetch the top 10 users with the highest XP from the daily XP database.
+    Returns a list of tuples (user_id, xp).
+    """
+    try:
+        cursor.execute("""
+        SELECT user_id, xp
+        FROM user_xp
+        ORDER BY xp DESC
+        LIMIT 10
+        """)
+        return cursor.fetchall()  # List of tuples (user_id, xp)
+    except sqlite3.Error as e:
+        print(f"Error fetching top users: {e}")
+        return []
+      
 async def save_daily_top_users(clan_role_1_id, clan_role_2_id):
     """
     Fetch the top 10 users of the day and save their XP to the respective clan role table.
@@ -478,7 +495,7 @@ async def save_daily_top_users(clan_role_1_id, clan_role_2_id):
 
 # The reset task function (as an example)
 @tasks.loop(seconds=30)
-async def reset_task(bot, GUILD_ID, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID):
+async def reset_task(CLAN_ROLE_1_ID, CLAN_ROLE_2_ID):
     # Add logic to fetch top users and save their data, then reset the database
     await save_daily_top_users(CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
     await reset_database()
