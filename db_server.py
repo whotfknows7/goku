@@ -82,7 +82,6 @@ def update_bulk_xp(user_xp_data):
         print(f"Error bulk updating XP: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error bulk updating XP: {e}\n")
-
 # Function to reset the database
 def reset_database():
     try:
@@ -99,7 +98,7 @@ def reset_database():
 # Function to schedule the daily reset using sched
 def schedule_reset(scheduler, interval, action):
     scheduler.enter(interval, 1, action)  # Schedule the action after the interval
-    scheduler.run()  # Run the scheduler
+    scheduler.run(blocking=False)  # Run the scheduler in non-blocking mode
 
 # Function to repeatedly reset the database every 24 hours
 def reset_periodically():
