@@ -1,6 +1,8 @@
+import discord
 import sqlite3
 import time
 import asyncio
+from bot import get_user_roles
 GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
 CLAN_ROLE_2_ID = 1247225208700665856
@@ -132,26 +134,7 @@ def fetch_top_10_users():
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error fetching top 10 users: {e}\n")
         return []
 
-# Asynchronous function to get user roles from the guild
-async def get_user_roles(user_id):
-    try:
-        guild = client.get_guild(GUILD_ID)  # Get the guild using the predefined GUILD_ID
-        if guild is None:
-            print(f"Guild with ID {GUILD_ID} not found.")
-            return []
 
-        member = guild.get_member(user_id)  # Get the member by user ID
-        if member is None:
-            print(f"User {user_id} not found in the guild.")
-            return []
-
-        # Get the role IDs the user has
-        user_roles = [role.id for role in member.roles]
-
-        return user_roles  # List of role IDs for the user
-    except discord.DiscordException as e:
-        print(f"Error fetching roles for user {user_id}: {e}")
-        return []
 
 # Function to save/update user XP in the correct clan role table
 def save_user_to_clan_role_table(user_id, xp, clan_role):
