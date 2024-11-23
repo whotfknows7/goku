@@ -2,7 +2,7 @@ import sqlite3
 import time
 import asyncio
 
-GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
+
 CLAN_ROLE_1_ID = 1247225208700665856  # Replace with your actual role ID
 CLAN_ROLE_2_ID = 1245407423917854754  # Replace with your actual role ID
 
@@ -107,26 +107,6 @@ def fetch_top_10_users():
         print(f"Error fetching top users: {e}")
         return []
           
-async def save_daily_top_users(bot, guild_id, clan_role_1_id, clan_role_2_id):
-    """
-    Fetch the top 10 users of the day and save their XP to the respective clan role table.
-    """
-    top_users = fetch_top_10_users()  # Fetch top 10 users from daily XP database
-
-    guild = bot.get_guild(guild_id)  # Fetch the guild (server)
-    if not guild:
-        print(f"Guild with ID {guild_id} not found!")
-        return
-
-    for user_id, xp in top_users:
-        member = guild.get_member(user_id)  # Fetch member object
-        if member:
-            roles = [role.id for role in member.roles]  # List of role IDs for the member
-
-            if clan_role_1_id in roles:  # Check if user has clan role 1
-                save_to_clan_table("clan_role_1", user_id, xp)
-            elif clan_role_2_id in roles:  # Check if user has clan role 2
-                save_to_clan_table("clan_role_2", user_id, xp)
 
 # Function to reset the database (clear all XP data)
 async def reset_database():
@@ -141,12 +121,3 @@ async def reset_database():
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
             
-async def reset_task(bot):
-    while True:
-        await asyncio.sleep(30)  # Wait for 24 hours
-        try:
-            # Save top users before resetting the database
-            await save_daily_top_users(bot, GUILD_ID, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
-            await reset_database()  # Reset the database
-        except Exception as e:
-            print(f"Error in reset_task: {e}")
