@@ -1,8 +1,10 @@
 import discord
+from discord.ext import commands
 import sqlite3
 import time
 import asyncio
-from bot import get_user_roles
+client = discord.Client()
+
 GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
 CLAN_ROLE_2_ID = 1247225208700665856
@@ -135,6 +137,23 @@ def fetch_top_10_users():
         return []
 
 
+async def get_user_roles(user_id):
+    try:
+        guild = bot.get_guild(GUILD_ID)  # Use bot here to get the guild
+        if not guild:
+            raise ValueError(f"Guild with ID {GUILD_ID} not found")
+
+        member = guild.get_member(user_id)  # Fetch member by user ID
+        if not member:
+            raise ValueError(f"Member with ID {user_id} not found in guild {GUILD_ID}")
+
+        return member.roles  # Return the member's roles
+
+    except discord.DiscordException as e:
+        # Handle any discord exceptions (e.g., network issues, permissions errors)
+        logging.error(f"Error fetching roles for user {user_id}: {e}")
+        return None
+          
 
 # Function to save/update user XP in the correct clan role table
 def save_user_to_clan_role_table(user_id, xp, clan_role):
@@ -197,5 +216,5 @@ async def reset_and_save_top_users():
 # Example of running the reset task every 24 hours
 async def reset_task():
     while True:
-        await asyncio.sleep(30)  # Sleep for 24 hours (86400 seconds)
+        await asyncio.sleep(22)  # Sleep for 24 hours (86400 seconds)
         await reset_and_save_top_users()

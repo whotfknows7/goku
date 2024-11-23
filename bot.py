@@ -54,25 +54,7 @@ async def on_resumed():
 @bot.event
 async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred: {event}, {args}, {kwargs}")
-
-async def get_user_roles(user_id):
-    try:
-        guild = bot.get_guild(GUILD_ID)  # Use bot here to get the guild
-        if not guild:
-            raise ValueError(f"Guild with ID {GUILD_ID} not found")
-
-        member = guild.get_member(user_id)  # Fetch member by user ID
-        if not member:
-            raise ValueError(f"Member with ID {user_id} not found in guild {GUILD_ID}")
-
-        return member.roles  # Return the member's roles
-
-    except discord.DiscordException as e:
-        # Handle any discord exceptions (e.g., network issues, permissions errors)
-        logging.error(f"Error fetching roles for user {user_id}: {e}")
-        return None
-          
-    
+ 
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
