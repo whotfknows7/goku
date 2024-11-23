@@ -11,6 +11,7 @@ from db_server import update_user_xp, delete_user_data, schedule_reset  # Import
 import re
 import emoji
 from typing import List, Dict
+import threading
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -41,10 +42,7 @@ FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
     update_leaderboard.start()  # Ensure your leaderboard update function is also running
-    schedule_reset()
-    while True:
-                schedule.run_pending()  # Run the scheduled tasks
-                await asyncio.sleep(60)  # Wait for 1 minute before checking agai
+
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Attempting to reconnect...")
@@ -486,6 +484,22 @@ async def announce_role_update(member, role_name):
         message = role_info["message"].format(member=member)
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
         await channel.send(message)
+        
+def run_bot():
+    bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)
 
-# Run bot with token
-bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)  # Replace with your bot token
+# Function to run the scheduler (in a separate thread)
+def run_scheduler():
+    while True:
+        schedule.run_pending()  # Run the scheduled tasks
+        time.sleep(60)  # Wait for 1 minute before checking again
+
+# Start bot and scheduler in separate threads
+if __name__ == '__main__':
+    # Start scheduler thread
+    scheduler_thread = threading.Thread(target=run_scheduler)
+    scheduler_thread.daemon = True  # This allows the scheduler thread to exit when the main program exits
+    scheduler_thread.start()
+
+    # Run the bot in the main thread
+    run_bot()
