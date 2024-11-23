@@ -41,7 +41,7 @@ FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
     update_leaderboard.start()  # Ensure your leaderboard update function is also running
-    bot.loop.create_task(reset_task())
+     bot.loop.create_task(reset_task(bot, GUILD_ID, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID))
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Attempting to reconnect...")
