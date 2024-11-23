@@ -458,15 +458,55 @@ async def update_leaderboard(ctx=None):
 async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
-    
-# Fetch top 10 users with XP
-def fetch_top_10_users():
+
+
+# Function to check if a user has either of two roles by their role IDs
+async def has_either_role_by_ids(bot, user_id, role_id_1, role_id_2):
+    try:
+        # Get the guild (replace with your actual GUILD_ID)
+        guild = bot.get_guild(GUILD_ID)
+        
+        if guild is None:
+            print("Guild not found.")
+            return False
+
+        # Fetch the member using user_id
+        member = guild.get_member(user_id)
+        
+        if member is None:
+            print("Member not found.")
+            return False
+
+        # Check if the member has either of the two roles
+        for role in member.roles:
+            if role.id == role_id_1 or role.id == role_id_2:
+                return True
+        
+        return False
+    except discord.DiscordException as e:
+        print(f"Error checking roles: {e}")
+        return False
+
+
+# Fetch top 10 users with XP and check their roles
+async def fetch_top_10_users_and_check_roles(bot, role_id_1, role_id_2):
     cursor.execute('''
         SELECT user_id, xp FROM user_xp
         ORDER BY xp DESC
         LIMIT 10
     ''')
-    return cursor.fetchall()    
+    top_users = cursor.fetchall()
+
+    # List to store users who have the required role
+    users_with_role = []
+
+    # Iterate over the top 10 users and check if they have either role
+    for user_id, xp in top_users:
+        has_role = await has_either_role_by_ids(bot, user_id, role_id_1, role_id_2)
+        if has_role:
+            users_with_role.append({'user_id': user_id, 'xp': xp})
+
+    return users_with_role
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},

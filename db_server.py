@@ -159,13 +159,12 @@ async def get_user_roles(user_id):
 def save_user_to_clan_role_table(user_id, xp, clan_role):
     try:
         # Determine the correct table based on the clan role
-        if clan_role == 'clan_role_1':
-            table_name = 'clan_role_1'
-        elif clan_role == 'clan_role_2':
-            table_name = 'clan_role_2'
-        else:
-            print(f"Unknown clan role: {clan_role}")
-            return
+        if CLAN_ROLE_1_ID in user_roles:
+            # Save or update the XP in Clan Role 1 table
+            save_user_to_clan_role_table(user_id, xp, 'clan_role_1')
+        elif CLAN_ROLE_2_ID in user_roles:
+            # Save or update the XP in Clan Role 2 table
+            save_user_to_clan_role_table(user_id, xp, 'clan_role_2')
 
         # Check if the user already exists in the table
         cursor.execute(f"SELECT xp FROM {table_name} WHERE user_id = ?", (user_id,))
