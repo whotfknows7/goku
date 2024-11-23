@@ -1,6 +1,7 @@
 import sqlite3
 import time
 import asyncio
+
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
@@ -83,7 +84,25 @@ def update_bulk_xp(user_xp_data):
         print(f"Error bulk updating XP: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error bulk updating XP: {e}\n")
-            
+
+     
+def fetch_top_10_users():
+    """
+    Fetch the top 10 users with the highest XP from the daily XP database.
+    Returns a list of tuples (user_id, xp).
+    """
+    try:
+        cursor.execute("""
+        SELECT user_id, xp
+        FROM user_xp
+        ORDER BY xp DESC
+        LIMIT 10
+        """)
+        return cursor.fetchall()  # List of tuples (user_id, xp)
+    except sqlite3.Error as e:
+        print(f"Error fetching top users: {e}")
+        return []
+                      
 # Function to reset the database (clear all XP data)
 async def reset_database():
     try:
@@ -99,7 +118,7 @@ async def reset_database():
 
 async def reset_task():
     while True:
-        await asyncio.sleep(86400)  # Wait 24 hours
+        await asyncio.sleep(60)  # Wait 24 hours
 
         await save_daily_top_users()  # Save top users before resetting
         await reset_database()       # Reset the database
