@@ -97,19 +97,13 @@ def reset_database():
         conn.rollback()
         print(f"Error resetting the database: {e}")
         with open("error_log.txt", "a") as log_file:
-            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error resetting the database: {e}\n")
+            log_file.write(f"Error resetting the database: {e}\n")
 
-# Set up APScheduler to call reset_database every 24 hours
-def schedule_daily_reset():
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(reset_database, 'interval', seconds=25)  # 24 hours (86400 seconds)
-    scheduler.start()
-
-    try:
-        while True:
-            time.sleep(1)  # Keeps the main program running
-    except (KeyboardInterrupt, SystemExit):
-        scheduler.shutdown()
+# Function to run the task loop
+def task_loop():
+    while True:
+        reset_database()  # Reset the database immediately
+        time.sleep(25)  # Sleep for 24 hours (86400 seconds)
 
 if __name__ == "__main__":
-    schedule_daily_reset()
+    task_loop()
