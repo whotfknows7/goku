@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
 from io import BytesIO
 import os
-from db_server import update_user_xp, delete_user_data, schedule_reset  # Import necessary functions only
+from db_server import update_user_xp, delete_user_data, schedule_reset, reset_database  # Import necessary functions only
 import re
 import emoji
 from typing import List, Dict
@@ -37,11 +37,16 @@ cached_top_users = []  # Cache for the last updated top 10 users
 cached_image_path = "leaderboard.png"  
 
 # Define FONT_PATH globally
-FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
-@bot.event
-async def on_ready():
-    logger.info(f"Bot logged in as {bot.user.name}")
-    update_leaderboard.start()  # Ensure your leaderboard update function is also running
+FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed\
+
+class MyBot(discord.Client):
+    async def on_ready(self):
+        logger.info(f"Bot logged in as {self.user.name}")
+        update_leaderboard.start()  # Make sure to start your leaderboard update task
+        # Start the scheduler for database reset
+        scheduler_thread = threading.Thread(target=run_scheduler)
+        scheduler_thread.daemon = True  # Allow thread to exit when the main program exits
+        scheduler_thread.start()
 
 @bot.event
 async def on_disconnect():
@@ -484,22 +489,24 @@ async def announce_role_update(member, role_name):
         message = role_info["message"].format(member=member)
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
         await channel.send(message)
-        
-def run_bot():
-    bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)
-
+ 
 # Function to run the scheduler (in a separate thread)
 def run_scheduler():
     while True:
         schedule.run_pending()  # Run the scheduled tasks
         time.sleep(60)  # Wait for 1 minute before checking again
 
+# Initialize bot
+bot = MyBot()
+
+# Function to run the bot (in the main thread)
+def run_bot():
+    bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)
+
 # Start bot and scheduler in separate threads
 if __name__ == '__main__':
-    # Start scheduler thread
-    scheduler_thread = threading.Thread(target=run_scheduler)
-    scheduler_thread.daemon = True  # This allows the scheduler thread to exit when the main program exits
-    scheduler_thread.start()
-
+    # Start the scheduler function
+    schedule_reset()
+    
     # Run the bot in the main thread
     run_bot()
