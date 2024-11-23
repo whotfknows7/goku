@@ -1,5 +1,6 @@
 import sqlite3
 import time
+import threading
 
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
@@ -17,7 +18,6 @@ conn.commit()
 
 # Create an index on user_id for faster queries
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_xp ON user_xp (user_id)')
-
 conn.commit()
 
 # Function to delete user data
@@ -82,3 +82,18 @@ def update_bulk_xp(user_xp_data):
         print(f"Error bulk updating XP: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error bulk updating XP: {e}\n")
+
+# Function to schedule the daily reset (for testing with 5-second interval)
+def schedule_daily_reset():
+    # Reset the database immediately
+    reset_database()
+    # Schedule the next reset in 5 seconds (use 86400 for 24 hours in production)
+    threading.Timer(5, schedule_daily_reset).start()
+
+if __name__ == "__main__":
+    # Start the daily reset function
+    schedule_daily_reset()
+
+    # Keep the main thread alive so the timers can continue to work
+    while True:
+        time.sleep(1)  # Sleep for a second, keeping the program running
