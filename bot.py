@@ -493,21 +493,14 @@ async def save_daily_top_users(clan_role_1_id, clan_role_2_id):
             elif clan_role_2_id in roles:  # Check if user has clan role 2
                 save_to_clan_table("clan_role_2", user_id, xp)
 
-                async def reset_task_wrapper():
+
+@async def reset_task_wrapper():
     await reset_task(CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
 
-@tasks.loop(seconds=3600)
+@tasks.loop(seconds=30)
 async def reset_task_loop():
     await reset_task_wrapper()
-
-# The reset task function (as an example)
-@tasks.loop(seconds=30)
-async def reset_task(CLAN_ROLE_1_ID, CLAN_ROLE_2_ID):
-    # Add logic to fetch top users and save their data, then reset the database
-    await save_daily_top_users(CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
     await reset_database()
-    
-    
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
