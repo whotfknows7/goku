@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
 LEADERBOARD_CHANNEL_ID = 1303672077068537916
 GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
-
+CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
+CLAN_ROLE_2_ID = 1247225208700665856
 # Define intents
 intents = discord.Intents.default()
 intents.members = True
@@ -458,24 +459,6 @@ async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
 
-    # Assuming `client` is the Discord bot client (discord.Client or commands.Bot)
-async def get_user_roles(user_id):
-    guild = client.get_guild(GUILD_ID)  # Get the guild using the predefined GUILD_ID
-    
-    if guild is None:
-        print("Guild not found.")
-        return []
-
-    member = guild.get_member(user_id)  # Get the member by user ID
-    if member is None:
-        print(f"User {user_id} not found in the guild.")
-        return []
-
-    # Get the role IDs the user has
-    user_roles = [role.id for role in member.roles]
-    
-    return user_roles
-  
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
