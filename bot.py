@@ -446,6 +446,11 @@ async def update_leaderboard():
 
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
+        
+@bot.command(name='hi')
+async def hi(ctx):
+    latency = bot.latency * 1000  # Convert latency to milliseconds
+    await ctx.send(f'Yes Masta! {latency:.2f}ms')
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
