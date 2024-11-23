@@ -378,9 +378,9 @@ async def create_leaderboard_image():
 
 @bot.command(name='live')
 async def live(ctx):
-    """Command to manually send the leaderboard."""
+    """Command to immediately send the live leaderboard to the user's channel."""
     await update_leaderboard(ctx)
-  
+
 @tasks.loop(seconds=20)
 async def update_leaderboard(ctx=None):
     """Update the leaderboard and optionally send it to the channel."""
@@ -389,13 +389,6 @@ async def update_leaderboard(ctx=None):
     global leaderboard_message
 
     try:
-        # Fetch the channel to send the leaderboard to
-        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-
-        if not channel:
-            logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
-            return
-
         # Fetch the current top 10 leaderboard data with extra details
         current_top_10 = await fetch_top_users_with_xp()
 
@@ -432,16 +425,20 @@ async def update_leaderboard(ctx=None):
         # Set the rotating trophy GIF as the thumbnail
         embed.set_image(url="attachment://leaderboard.png")
 
-        # Send the embed and image
-        if leaderboard_message:
-            # Delete the previous message if it exists
-            await leaderboard_message.delete()
-
-        leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
-
-        # If the context (ctx) is passed (i.e., triggered by `!live`), send the response to the user's channel
+        # If the context (ctx) is passed, send the leaderboard to the user's channel
         if ctx:
-            await ctx.send("Here is the live leaderboard!")
+            # Send the embed and image to the user's channel
+            await ctx.send("Here is the live leaderboard!", embed=embed, file=discord.File(image, filename="leaderboard.png"))
+        else:
+            # Send the leaderboard to the defined leaderboard channel (if periodic update)
+            channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+            if not channel:
+                logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
+                return
+            if leaderboard_message:
+                # Delete the previous message if it exists
+                await leaderboard_message.delete()
+            leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
 
     except discord.HTTPException as e:
         if e.status == 429:
@@ -454,6 +451,7 @@ async def update_leaderboard(ctx=None):
 
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
+
         
 @bot.command(name='hi')
 async def hi(ctx):
