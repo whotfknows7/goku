@@ -86,8 +86,10 @@ def update_bulk_xp(user_xp_data):
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error bulk updating XP: {e}\n")
             
 
-# Function to reset the database
-def reset_database():
+
+
+# Function to reset the database (clear all XP data)
+async def reset_database():
     try:
         cursor.execute("BEGIN TRANSACTION;")
         cursor.execute("DELETE FROM user_xp;")  # Clears all XP data
@@ -99,11 +101,8 @@ def reset_database():
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
 
-# Function to run the task loop
-def task_loop():
+# Task that resets the database every 24 hours
+async def reset_task():
     while True:
-        reset_database()  # Reset the database immediately
-        time.sleep(25)  # Sleep for 24 hours (86400 seconds)
-
-if __name__ == "__main__":
-    task_loop()
+        await asyncio.sleep(86400)  # 86400 seconds = 24 hours
+        await reset_database()
