@@ -1,5 +1,6 @@
 import sqlite3
 import time
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
@@ -27,6 +28,8 @@ def delete_user_data(user_id):
         print(f"Deleted data for user {user_id} who is no longer in the guild.")
     except sqlite3.Error as e:
         print(f"Error deleting user data for {user_id}: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error deleting user data for {user_id}: {e}\n")
 
 # Function to update user XP with transaction management
 def update_user_xp(user_id, total_xp):
@@ -39,7 +42,7 @@ def update_user_xp(user_id, total_xp):
         conn.rollback()
         print(f"Error updating XP for user {user_id}: {e}")
         with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error updating XP for user {user_id}: {e}\n")
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error updating XP for {user_id}: {e}\n")
 
 # Function to clean up invalid users
 def cleanup_invalid_users():
@@ -52,7 +55,7 @@ def cleanup_invalid_users():
         conn.rollback()
         print(f"Error during cleanup: {e}")
         with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error during cleanup: {e}\n")
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error during cleanup: {e}\n")
 
 # Function to check database integrity
 def check_database_integrity():
@@ -64,11 +67,11 @@ def check_database_integrity():
         else:
             print(f"Database integrity check failed: {result}")
             with open("error_log.txt", "a") as log_file:
-                log_file.write(f"Database integrity check failed: {result}\n")
+                log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Database integrity check failed: {result}\n")
     except sqlite3.Error as e:
         print(f"Error performing integrity check: {e}")
         with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error performing integrity check: {e}\n")
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error performing integrity check: {e}\n")
 
 # Function to bulk update XP
 def update_bulk_xp(user_xp_data):
@@ -80,5 +83,33 @@ def update_bulk_xp(user_xp_data):
         conn.rollback()
         print(f"Error bulk updating XP: {e}")
         with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error bulk updating XP: {e}\n")
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error bulk updating XP: {e}\n")
             
+
+# Function to reset the database
+def reset_database():
+    try:
+        cursor.execute("BEGIN TRANSACTION;")
+        cursor.execute("DELETE FROM user_xp;")  # Clears all XP data
+        conn.commit()
+        print("Database has been reset.")
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error resetting the database: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error resetting the database: {e}\n")
+
+# Set up APScheduler to call reset_database every 24 hours
+def schedule_daily_reset():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(reset_database, 'interval', seconds=25)  # 24 hours (86400 seconds)
+    scheduler.start()
+
+    try:
+        while True:
+            time.sleep(1)  # Keeps the main program running
+    except (KeyboardInterrupt, SystemExit):
+        scheduler.shutdown()
+
+if __name__ == "__main__":
+    schedule_daily_reset()
