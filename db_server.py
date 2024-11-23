@@ -2,6 +2,10 @@ import sqlite3
 import time
 import asyncio
 
+GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
+CLAN_ROLE_1_ID = 1247225208700665856  # Replace with your actual role ID
+CLAN_ROLE_2_ID = 1245407423917854754  # Replace with your actual role ID
+
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
@@ -102,7 +106,25 @@ def fetch_top_10_users():
     except sqlite3.Error as e:
         print(f"Error fetching top users: {e}")
         return []
-                      
+          
+async def save_daily_top_users():
+    """
+    Fetch the top 10 users of the day and save their XP to the respective clan role table.
+    """
+    top_users = fetch_top_10_users()  # Fetch top 10 users from daily XP database
+
+    for user_id, xp in top_users:
+        guild = bot.get_guild(GUILD_ID)  # Replace GUILD_ID with your actual guild/server ID
+        member = guild.get_member(user_id)  # Fetch member object from guild
+
+        if member:
+            roles = [role.id for role in member.roles]  # List of role IDs for the member
+
+            if CLAN_ROLE_1_ID in roles:  # Replace with the actual clan role ID
+                save_to_clan_table("1245407423917854754", user_id, xp)
+            elif CLAN_ROLE_2_ID in roles:  # Replace with the actual clan role ID
+                save_to_clan_table("1247225208700665856", user_id, xp)
+    
 # Function to reset the database (clear all XP data)
 async def reset_database():
     try:
@@ -115,11 +137,13 @@ async def reset_database():
         print(f"Error resetting the database: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
-
+            
 async def reset_task():
     while True:
-        await asyncio.sleep(60)  # Wait 24 hours
-
-        await save_daily_top_users()  # Save top users before resetting
-        await reset_database()       # Reset the database
-
+        await asyncio.sleep(30)  # Wait for 24 hours
+        try:
+            # Call save_daily_top_users before resetting the database
+            await save_daily_top_users(CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
+            await reset_database()  # Reset the database
+        except Exception as e:
+            print(f"Error in reset_task: {e}")
