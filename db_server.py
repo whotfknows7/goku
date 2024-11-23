@@ -1,9 +1,8 @@
-import discord
-from discord.ext import commands
+
 import sqlite3
 import time
 import asyncio
-client = discord.Client()
+
 
 GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
@@ -103,109 +102,10 @@ async def reset_database():
         print(f"Error resetting the database: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
-# Function to create clan role tables
-def create_clan_role_tables():
-    try:
-        cursor.execute('''CREATE TABLE IF NOT EXISTS clan_role_1 (
-            user_id TEXT PRIMARY KEY,
-            xp INTEGER NOT NULL CHECK(xp >= 0)
-        )''')
-
-        cursor.execute('''CREATE TABLE IF NOT EXISTS clan_role_2 (
-            user_id TEXT PRIMARY KEY,
-            xp INTEGER NOT NULL CHECK(xp >= 0)
-        )''')
-
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_clan_role_1_user_id_xp ON clan_role_1 (user_id, xp)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_clan_role_2_user_id_xp ON clan_role_2 (user_id, xp)')
-
-        conn.commit()
-    except sqlite3.Error as e:
-        print(f"Error creating clan role tables: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error creating clan role tables: {e}\n")
-
-# Function to fetch top 10 users by XP from the user_xp table
-def fetch_top_10_users():
-    try:
-        cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
-        return cursor.fetchall()  # Returns a list of tuples (user_id, xp)
-    except sqlite3.Error as e:
-        print(f"Error fetching top 10 users: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error fetching top 10 users: {e}\n")
-        return []
-
-
-async def get_user_roles(user_id):
-    try:
-        guild = bot.get_guild(GUILD_ID)  # Use bot here to get the guild
-        if not guild:
-            raise ValueError(f"Guild with ID {GUILD_ID} not found")
-
-        member = guild.get_member(user_id)  # Fetch member by user ID
-        if not member:
-            raise ValueError(f"Member with ID {user_id} not found in guild {GUILD_ID}")
-
-        return member.roles  # Return the member's roles
-
-    except discord.DiscordException as e:
-        # Handle any discord exceptions (e.g., network issues, permissions errors)
-        logging.error(f"Error fetching roles for user {user_id}: {e}")
-        return None
-          
-
-# Function to save/update user XP in the correct clan role table
-def save_user_to_clan_role_table(user_id, xp, clan_role):
-    try:
-        # Determine the correct table based on the clan role
-        if CLAN_ROLE_1_ID in user_roles:
-            # Save or update the XP in Clan Role 1 table
-            save_user_to_clan_role_table(user_id, xp, 'clan_role_1')
-        elif CLAN_ROLE_2_ID in user_roles:
-            # Save or update the XP in Clan Role 2 table
-            save_user_to_clan_role_table(user_id, xp, 'clan_role_2')
-
-        # Check if the user already exists in the table
-        cursor.execute(f"SELECT xp FROM {table_name} WHERE user_id = ?", (user_id,))
-        existing_xp = cursor.fetchone()
-
-        if existing_xp:
-            # User exists, update their XP
-            new_xp = existing_xp[0] + xp
-            cursor.execute(f"UPDATE {table_name} SET xp = ? WHERE user_id = ?", (new_xp, user_id))
-        else:
-            # New user, insert their XP
-            cursor.execute(f"INSERT INTO {table_name} (user_id, xp) VALUES (?, ?)", (user_id, xp))
-
-        conn.commit()
-        print(f"XP for user {user_id} updated in {clan_role} table.")
-
-    except sqlite3.Error as e:
-        print(f"Error saving XP for user {user_id} in {clan_role}: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for user {user_id} in {clan_role}: {e}\n")
-
-# Main logic to process and save top 10 users' XP
-async def save_top_10_users():
-    top_users = fetch_top_10_users()  # Get the top 10 users based on XP
-    for user_id, xp in top_users:
-        # Get the user's roles
-        user_roles = await get_user_roles(user_id)
-
-        # Check if the user has the Clan Role 1 or Clan Role 2
-        if CLAN_ROLE_1_ID in user_roles:
-            # Save or update the XP in Clan Role 1 table
-            save_user_to_clan_role_table(user_id, xp, 'clan_role_1')
-        elif CLAN_ROLE_2_ID in user_roles:
-            # Save or update the XP in Clan Role 2 table
-            save_user_to_clan_role_table(user_id, xp, 'clan_role_2')
-        else:
-            print(f"User {user_id} doesn't have a valid clan role.")
-            
+         
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
-    await save_top_10_users()  # Save the top 10 users' XP before reset
+    await save_user_to_clan_role_table()  # Save the top 10 users' XP before reset
     
     # Reset the user_xp table
     cursor.execute("DELETE FROM user_xp;")
