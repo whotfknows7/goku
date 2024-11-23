@@ -1,7 +1,6 @@
 import sqlite3
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
-
+import asyncio
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
@@ -104,5 +103,5 @@ async def reset_database():
 # Task that resets the database every 24 hours
 async def reset_task():
     while True:
-        await asyncio.sleep(86400)  # 86400 seconds = 24 hours
+        await asyncio.sleep(25)  # 86400 seconds = 24 hours
         await reset_database()
