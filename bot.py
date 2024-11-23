@@ -376,8 +376,14 @@ async def create_leaderboard_image():
 
     return img_binary
 
+@bot.command(name='live')
+async def live(ctx):
+    """Command to manually send the leaderboard."""
+    await update_leaderboard(ctx)
+  
 @tasks.loop(seconds=20)
-async def update_leaderboard():
+async def update_leaderboard(ctx=None):
+    """Update the leaderboard and optionally send it to the channel."""
     global previous_top_10
     global cached_top_users
     global leaderboard_message
@@ -398,14 +404,12 @@ async def update_leaderboard():
             return
 
         # Update the cached top 10
-        # If there's a previous cached top, add it to the old cache
         if previous_top_10:
             cached_top_users.append(previous_top_10)
 
-        # Maintain only two entries: current and previous
         if len(cached_top_users) > 1:
             cached_top_users.pop(0)  # Remove the oldest cached list
-        
+
         previous_top_10 = current_top_10  # Update the current top 10
 
         # Generate the leaderboard image
@@ -434,6 +438,10 @@ async def update_leaderboard():
             await leaderboard_message.delete()
 
         leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
+
+        # If the context (ctx) is passed (i.e., triggered by `!live`), send the response to the user's channel
+        if ctx:
+            await ctx.send("Here is the live leaderboard!")
 
     except discord.HTTPException as e:
         if e.status == 429:
