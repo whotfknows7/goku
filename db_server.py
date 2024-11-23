@@ -142,34 +142,46 @@ def save_top_10_users_to_clan_roles():
         elif 'clan_role_2' in user_roles:
             save_user_to_clan_role_table('clan_role_2', user_id, xp)
 
-# Function to save user XP to the correct clan role table
-def save_user_to_clan_role_table(clan_role_table, user_id, xp):
+# Function to save the user XP in the corresponding clan role table
+def save_user_to_clan_role_table(clan_role, user_id, xp):
+    if clan_role == 'clan_role_1':
+        table_name = 'clan_role_1'
+    elif clan_role == 'clan_role_2':
+        table_name = 'clan_role_2'
+    else:
+        print("Unknown clan role.")
+        return
+    
     try:
-        cursor.execute(f"INSERT OR REPLACE INTO {clan_role_table} (user_id, xp) VALUES (?, ?)", (user_id, xp))
+        # Check if user already exists in the table, if yes, update XP, else insert new record
+        cursor.execute(f"SELECT xp FROM {table_name} WHERE user_id = ?", (user_id,))
+        existing_xp = cursor.fetchone()
+        
+        if existing_xp:
+            new_xp = existing_xp[0] + xp  # Add the new XP to the existing one
+            cursor.execute(f"UPDATE {table_name} SET xp = ? WHERE user_id = ?", (new_xp, user_id))
+        else:
+            cursor.execute(f"INSERT INTO {table_name} (user_id, xp) VALUES (?, ?)", (user_id, xp))
+
         conn.commit()
+        print(f"User {user_id} XP updated in {clan_role}.")
+        
     except sqlite3.Error as e:
-        print(f"Error saving XP for {user_id} in {clan_role_table}: {e}")
+        print(f"Error saving XP for {user_id} in {clan_role}: {e}")
         with open("error_log.txt", "a") as log_file:
-            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for {user_id} in {clan_role_table}: {e}\n")
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for {user_id} in {clan_role}: {e}\n")
+            
+# Function to reset the database and perform the save operation
+async def reset_and_save_top_users():
+    await save_top_10_users()  # Save the top 10 users' XP before reset
+    
+    # Reset the user_xp table
+    cursor.execute("DELETE FROM user_xp;")
+    conn.commit()
+    print("XP data reset and top users saved.")
 
-# Function to reset the database and save top 10 users data
-async def reset_database_and_save_top_10():
-    try:
-        # Save the top 10 users to clan role tables before reset
-        save_top_10_users_to_clan_roles()
-
-        # Now reset the user_xp table
-        cursor.execute("BEGIN TRANSACTION;")
-        cursor.execute("DELETE FROM user_xp;")
-        conn.commit()
-        print("Database has been reset and top 10 users data has been saved.")
-    except sqlite3.Error as e:
-        conn.rollback()
-        print(f"Error during reset and saving top 10 users data: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error during reset and saving top 10 users data: {e}\n")
-
+# Example of running the reset task every 24 hours
 async def reset_task():
     while True:
-        await asyncio.sleep(86400)  # 86400 seconds = 24 hours
-        await reset_database_and_save_top_10()
+        await asyncio.sleep(86400)  # Sleep for 24 hours (86400 seconds)
+        await reset_and_save_top_users()

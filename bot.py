@@ -458,6 +458,24 @@ async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
 
+    # Assuming `client` is the Discord bot client (discord.Client or commands.Bot)
+async def get_user_roles(user_id):
+    guild = client.get_guild(GUILD_ID)  # Get the guild using the predefined GUILD_ID
+    
+    if guild is None:
+        print("Guild not found.")
+        return []
+
+    member = guild.get_member(user_id)  # Get the member by user ID
+    if member is None:
+        print(f"User {user_id} not found in the guild.")
+        return []
+
+    # Get the role IDs the user has
+    user_roles = [role.id for role in member.roles]
+    
+    return user_roles
+  
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
