@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
 from io import BytesIO
 import os
-from db_server import update_user_xp, delete_user_data, reset_database # Import necessary functions only
+from db_server import update_user_xp, delete_user_data  # Import necessary functions only
 import re
 import emoji
 from typing import List, Dict
@@ -19,8 +19,6 @@ logger = logging.getLogger(__name__)
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
 LEADERBOARD_CHANNEL_ID = 1303672077068537916
 GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
-CLAN_ROLE_1_ID = 1247225208700665856  # Replace with your actual role ID
-CLAN_ROLE_2_ID = 1245407423917854754  # Replace with your actual role ID
 
 # Define intents
 intents = discord.Intents.default()
@@ -43,7 +41,7 @@ FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
     update_leaderboard.start()  # Ensure your leaderboard update function is also running
-    reset_task.start()
+
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Attempting to reconnect...")
@@ -460,47 +458,6 @@ async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
 
-def fetch_top_10_users():
-    """
-    Fetch the top 10 users with the highest XP from the daily XP database.
-    Returns a list of tuples (user_id, xp).
-    """
-    try:
-        cursor.execute("""
-        SELECT user_id, xp
-        FROM user_xp
-        ORDER BY xp DESC
-        LIMIT 10
-        """)
-        return cursor.fetchall()  # List of tuples (user_id, xp)
-    except sqlite3.Error as e:
-        print(f"Error fetching top users: {e}")
-        return []
-      
-async def save_daily_top_users(clan_role_1_id, clan_role_2_id):
-    """
-    Fetch the top 10 users of the day and save their XP to the respective clan role table.
-    """
-    top_users = fetch_top_10_users()  # Fetch top 10 users from daily XP database
-
-    for user_id, xp in top_users:
-        member = guild.get_member(user_id)  # Fetch member object
-        if member:
-            roles = [role.id for role in member.roles]  # List of role IDs for the member
-
-            if clan_role_1_id in roles:  # Check if user has clan role 1
-                save_to_clan_table("clan_role_1", user_id, xp)
-            elif clan_role_2_id in roles:  # Check if user has clan role 2
-                save_to_clan_table("clan_role_2", user_id, xp)
-
-
-@async def reset_task_wrapper():
-    await reset_task(CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
-
-@tasks.loop(seconds=30)
-async def reset_task_loop():
-    await reset_task_wrapper()
-    await reset_database()
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
