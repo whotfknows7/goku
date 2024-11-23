@@ -1,6 +1,6 @@
 import sqlite3
 import time
-import threading
+import sched
 
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
@@ -83,17 +83,28 @@ def update_bulk_xp(user_xp_data):
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error bulk updating XP: {e}\n")
 
-# Function to schedule the daily reset (for testing with 5-second interval)
-def schedule_daily_reset():
-    # Reset the database immediately
-    reset_database()
-    # Schedule the next reset in 5 seconds (use 86400 for 24 hours in production)
-    threading.Timer(5, schedule_daily_reset).start()
+# Function to reset the database
+def reset_database():
+    try:
+        cursor.execute("BEGIN TRANSACTION;")
+        cursor.execute("DELETE FROM user_xp;")  # Clears all XP data
+        conn.commit()
+        print("Database has been reset.")
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error resetting the database: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error resetting the database: {e}\n")
+
+# Function to schedule the daily reset using sched
+def schedule_reset(scheduler, interval, action):
+    scheduler.enter(interval, 1, action)  # Schedule the action after the interval
+    scheduler.run()  # Run the scheduler
+
+# Function to repeatedly reset the database every 24 hours
+def reset_periodically():
+    scheduler = sched.scheduler(time.time, time.sleep)
+    schedule_reset(scheduler, 5, reset_database)  # 5 seconds for testing, change to 86400 for 24 hours
 
 if __name__ == "__main__":
-    # Start the daily reset function
-    schedule_daily_reset()
-
-    # Keep the main thread alive so the timers can continue to work
-    while True:
-        time.sleep(1)  # Sleep for a second, keeping the program running
+    reset_periodically()
