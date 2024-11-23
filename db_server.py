@@ -1,7 +1,6 @@
 import sqlite3
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
-
+import asyncio
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
@@ -85,9 +84,8 @@ def update_bulk_xp(user_xp_data):
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error bulk updating XP: {e}\n")
             
-
-# Function to reset the database
-def reset_database():
+# Function to reset the database (clear all XP data)
+async def reset_database():
     try:
         cursor.execute("BEGIN TRANSACTION;")
         cursor.execute("DELETE FROM user_xp;")  # Clears all XP data
@@ -97,19 +95,10 @@ def reset_database():
         conn.rollback()
         print(f"Error resetting the database: {e}")
         with open("error_log.txt", "a") as log_file:
-            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error resetting the database: {e}\n")
+            log_file.write(f"Error resetting the database: {e}\n")
 
-# Set up APScheduler to call reset_database every 24 hours
-def schedule_daily_reset():
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(reset_database, 'interval', seconds=25)  # 24 hours (86400 seconds)
-    scheduler.start()
-
-    try:
-        while True:
-            time.sleep(1)  # Keeps the main program running
-    except (KeyboardInterrupt, SystemExit):
-        scheduler.shutdown()
-
-if __name__ == "__main__":
-    schedule_daily_reset()
+# Task that resets the database every 24 hours
+async def reset_task():
+    while True:
+        await asyncio.sleep(86400)  # 86400 seconds = 24 hours
+        await reset_database()
