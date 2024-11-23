@@ -2,7 +2,7 @@
 import sqlite3
 import time
 import asyncio
-
+from util import save_user_to_clan_role_table
 
 GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
@@ -105,7 +105,7 @@ async def reset_database():
          
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
-    await save_user_to_clan_role_table()  # Save the top 10 users' XP before reset
+    await save_user_to_clan_role_table  # Save the top 10 users' XP before reset
     
     # Reset the user_xp table
     cursor.execute("DELETE FROM user_xp;")
