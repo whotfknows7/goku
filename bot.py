@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
 from io import BytesIO
 import os
-from db_server import update_user_xp, delete_user_data  # Import necessary functions only
+from db_server import update_user_xp, delete_user_data, schedule_reset  # Import necessary functions only
 import re
 import emoji
 from typing import List, Dict
@@ -41,7 +41,10 @@ FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 async def on_ready():
     logger.info(f"Bot logged in as {bot.user.name}")
     update_leaderboard.start()  # Ensure your leaderboard update function is also running
-
+    schedule_reset()
+    while True:
+                schedule.run_pending()  # Run the scheduled tasks
+                await asyncio.sleep(60)  # Wait for 1 minute before checking agai
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Attempting to reconnect...")

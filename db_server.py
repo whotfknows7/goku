@@ -1,9 +1,28 @@
 import sqlite3
 import time
-
+import schedule
+import asyncio
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
+
+
+# Define the reset function
+async def reset_database():
+    try:
+        cursor.execute("BEGIN TRANSACTION;")
+        cursor.execute("DELETE FROM user_xp")  # Clear all user data
+        conn.commit()
+        print("Database reset successfully.")
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error resetting database: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error resetting database: {e}\n")
+
+# Schedule the reset function to run at 5 AM every day
+def schedule_reset():
+    schedule.every().day.at("05:00").do(lambda: asyncio.run(reset_database()))
 
 # Create the user_xp table
 cursor.execute('''
@@ -17,7 +36,6 @@ conn.commit()
 
 # Create an index on user_id for faster queries
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_id_xp ON user_xp (user_id)')
-
 conn.commit()
 
 # Function to delete user data
@@ -46,8 +64,7 @@ def update_user_xp(user_id, total_xp):
 def cleanup_invalid_users():
     try:
         cursor.execute("BEGIN TRANSACTION;")
-        # Remove users with negative XP
-        cursor.execute("DELETE FROM user_xp WHERE xp < 0")
+        cursor.execute("DELETE FROM user_xp WHERE xp < 0")  # Remove users with negative XP
         conn.commit()
     except sqlite3.Error as e:
         conn.rollback()
