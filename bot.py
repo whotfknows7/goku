@@ -458,6 +458,15 @@ async def update_leaderboard(ctx=None):
 async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
+    
+# Fetch top 10 users with XP
+def fetch_top_10_users():
+    cursor.execute('''
+        SELECT user_id, xp FROM user_xp
+        ORDER BY xp DESC
+        LIMIT 10
+    ''')
+    return cursor.fetchall()    
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
