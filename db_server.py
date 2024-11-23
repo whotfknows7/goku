@@ -97,8 +97,10 @@ async def reset_database():
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
 
-# Task that resets the database every 24 hours
 async def reset_task():
     while True:
-        await asyncio.sleep(86400)  # 86400 seconds = 24 hours
-        await reset_database()
+        await asyncio.sleep(86400)  # Wait 24 hours
+
+        await save_daily_top_users()  # Save top users before resetting
+        await reset_database()       # Reset the database
+
