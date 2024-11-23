@@ -7,11 +7,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
 from io import BytesIO
 import os
-from db_server import update_user_xp, delete_user_data, schedule_reset, reset_database  # Import necessary functions only
+from db_server import update_user_xp, delete_user_data  # Import necessary functions only
 import re
 import emoji
 from typing import List, Dict
-import threading
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -37,16 +36,11 @@ cached_top_users = []  # Cache for the last updated top 10 users
 cached_image_path = "leaderboard.png"  
 
 # Define FONT_PATH globally
-FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed\
-
-class MyBot(discord.Client):
-    async def on_ready(self):
-        logger.info(f"Bot logged in as {self.user.name}")
-        update_leaderboard.start()  # Make sure to start your leaderboard update task
-        # Start the scheduler for database reset
-        scheduler_thread = threading.Thread(target=run_scheduler)
-        scheduler_thread.daemon = True  # Allow thread to exit when the main program exits
-        scheduler_thread.start()
+FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
+@bot.event
+async def on_ready():
+    logger.info(f"Bot logged in as {bot.user.name}")
+    update_leaderboard.start()  # Ensure your leaderboard update function is also running
 
 @bot.event
 async def on_disconnect():
@@ -382,19 +376,20 @@ async def create_leaderboard_image():
 
     return img_binary
 
-@bot.command(name='live')
-async def live(ctx):
-    """Command to immediately send the live leaderboard to the user's channel."""
-    await update_leaderboard(ctx)
-
 @tasks.loop(seconds=20)
-async def update_leaderboard(ctx=None):
-    """Update the leaderboard and optionally send it to the channel."""
+async def update_leaderboard():
     global previous_top_10
     global cached_top_users
     global leaderboard_message
 
     try:
+        # Fetch the channel to send the leaderboard to
+        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+
+        if not channel:
+            logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
+            return
+
         # Fetch the current top 10 leaderboard data with extra details
         current_top_10 = await fetch_top_users_with_xp()
 
@@ -403,12 +398,14 @@ async def update_leaderboard(ctx=None):
             return
 
         # Update the cached top 10
+        # If there's a previous cached top, add it to the old cache
         if previous_top_10:
             cached_top_users.append(previous_top_10)
 
+        # Maintain only two entries: current and previous
         if len(cached_top_users) > 1:
             cached_top_users.pop(0)  # Remove the oldest cached list
-
+        
         previous_top_10 = current_top_10  # Update the current top 10
 
         # Generate the leaderboard image
@@ -431,20 +428,12 @@ async def update_leaderboard(ctx=None):
         # Set the rotating trophy GIF as the thumbnail
         embed.set_image(url="attachment://leaderboard.png")
 
-        # If the context (ctx) is passed, send the leaderboard to the user's channel
-        if ctx:
-            # Send the embed and image to the user's channel
-            await ctx.send("Here is the live leaderboard!", embed=embed, file=discord.File(image, filename="leaderboard.png"))
-        else:
-            # Send the leaderboard to the defined leaderboard channel (if periodic update)
-            channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-            if not channel:
-                logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
-                return
-            if leaderboard_message:
-                # Delete the previous message if it exists
-                await leaderboard_message.delete()
-            leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
+        # Send the embed and image
+        if leaderboard_message:
+            # Delete the previous message if it exists
+            await leaderboard_message.delete()
+
+        leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
 
     except discord.HTTPException as e:
         if e.status == 429:
@@ -457,7 +446,6 @@ async def update_leaderboard(ctx=None):
 
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
-
         
 @bot.command(name='hi')
 async def hi(ctx):
@@ -489,24 +477,6 @@ async def announce_role_update(member, role_name):
         message = role_info["message"].format(member=member)
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
         await channel.send(message)
- 
-# Function to run the scheduler (in a separate thread)
-def run_scheduler():
-    while True:
-        schedule.run_pending()  # Run the scheduled tasks
-        time.sleep(60)  # Wait for 1 minute before checking again
 
-# Initialize bot
-bot = MyBot()
-
-# Function to run the bot (in the main thread)
-def run_bot():
-    bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)
-
-# Start bot and scheduler in separate threads
-if __name__ == '__main__':
-    # Start the scheduler function
-    schedule_reset()
-    
-    # Run the bot in the main thread
-    run_bot()
+# Run bot with token
+bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)  # Replace with your bot token
