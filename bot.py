@@ -330,7 +330,7 @@ async def create_leaderboard_image():
 
     if not top_users:
         # If no users fetched, display a message
-        draw.text((PADDING, PADDING), "Bruh sadly No-one is yapping yet...", font=font, fill="white")
+        draw.text((PADDING, PADDING), "Bruh sadly No-one is yapping right now...", font=font, fill="white")
     else:
         for rank, user in enumerate(top_users, 1):
             user_id = user['user_id']
