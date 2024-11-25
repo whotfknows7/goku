@@ -562,7 +562,7 @@ async def save_user_to_clan_role_table(bot, user_id, xp):
         has_role_1 = await has_either_role_by_ids(bot, user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
 
         if has_role_1:
-            # Determine the correct table based on the clan role
+            # Only check the role once, and then determine the clan table
             if await has_either_role_by_ids(bot, user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID):
                 clan_role = 'clan_role_1'
             else:
