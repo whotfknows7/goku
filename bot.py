@@ -93,7 +93,7 @@ async def reset_and_save_top_users():
 # Example of running the reset task every 24 hours
 async def reset_task():
     while True:
-        await asyncio.sleep(60)  # Sleep for 24 hours (86400 seconds)
+        await asyncio.sleep(86400)  # Sleep for 24 hours (86400 seconds)
         await reset_and_save_top_users()
          
 # Function to count custom emojis in a message
@@ -613,14 +613,19 @@ async def send_clan_comparison_leaderboard(ctx):
     total_xp_clan_1 = await calculate_clan_xp("clan_role_1")
     total_xp_clan_2 = await calculate_clan_xp("clan_role_2")
     
+    # Format the XP numbers with commas
+    total_xp_clan_1_formatted = f"{total_xp_clan_1:,}"
+    total_xp_clan_2_formatted = f"{total_xp_clan_2:,}"
+
     # Prepare the message
     one_emoji = "<a:One:1310686608109862962>"
     two_emoji = "<a:pink_two:1310686637902004224>"
     dash_blue = "<:dash_blue:1310695526244552824>"
+
     comparison_message = (
-        f"**🏆 Weekly Clan Leaderboard! 🏆**\n\n"  # Added newline after heading
-        f"{one_emoji}{dash_blue}<@&{CLAN_ROLE_1_ID}>     `{total_xp_clan_1}`  XP Pts\n"  # Ping Clan Role 1
-        f"{two_emoji}{dash_blue}<@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2}`  XP Pts\n"  # Ping Clan Role 2
+        f"**🏆  Weekly Clan Leaderboard!  🏆**\n\n"  # Added newline after heading
+        f"{one_emoji}{dash_blue}<@&{CLAN_ROLE_1_ID}>     `{total_xp_clan_1_formatted}` XP Pts\n"  # Ping Clan Role 1
+        f"{two_emoji}{dash_blue}<@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2_formatted}` XP Pts\n"  # Ping Clan Role 2
     )
 
     # Send the message to the desired channel (for example, leaderboard channel)
