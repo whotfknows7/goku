@@ -20,3 +20,8 @@
 2024-11-25 13:25:12 - Error updating XP for user 959716932104384562: attempt to write a readonly database
 2024-11-25 13:25:13 - Error updating XP for user 959716932104384562: attempt to write a readonly database
 2024-11-25 13:25:15 - Error updating XP for user 1055740140720496710: attempt to write a readonly database
+2024-11-25 13:37:54 - Error updating XP for user 959716932104384562: attempt to write a readonly database
+2024-11-25 13:37:55 - Error updating XP for user 959716932104384562: attempt to write a readonly database
+2024-11-25 13:38:20 - Error updating XP for user 959716932104384562: attempt to write a readonly database
+2024-11-25 13:38:50 - Error updating XP for user 762715169351532555: attempt to write a readonly database
+2024-11-25 13:39:19 - Error updating XP for user 762715169351532555: attempt to write a readonly database
