@@ -55,6 +55,30 @@ async def on_resumed():
 async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred: {event}, {args}, {kwargs}")
  
+# Function to delete user data
+def delete_user_data(user_id):
+    try:
+        cursor.execute("DELETE FROM user_xp WHERE user_id = ?", (user_id,))
+        conn.commit()
+        print(f"Deleted data for user {user_id} who is no longer in the guild.")
+    except sqlite3.Error as e:
+        print(f"Error deleting user data for {user_id}: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error deleting user data for {user_id}: {e}\n")
+
+# Function to update user XP with transaction management
+def update_user_xp(user_id, total_xp):
+    try:
+        cursor.execute("BEGIN TRANSACTION;")
+        cursor.execute("INSERT OR IGNORE INTO user_xp (user_id, xp) VALUES (?, ?)", (user_id, 0))
+        cursor.execute("UPDATE user_xp SET xp = xp + ? WHERE user_id = ?", (total_xp, user_id))
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error updating XP for user {user_id}: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error updating XP for {user_id}: {e}\n")
+
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
