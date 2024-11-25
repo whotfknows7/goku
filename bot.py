@@ -110,36 +110,9 @@ def round_pfp(img_pfp):
     img_pfp.putalpha(mask)  # Apply the rounded mask as alpha (transparency)
     return img_pfp
   
-# Cache for storing the previous top 10 users with more details (ID, XP, avatar URL, nickname)
-previous_top_10 = []  # A list of dictionaries to store user data
-
-# Modify the update function to save more information
-async def fetch_top_users_with_xp() -> List[Dict]:
-    """
-    Fetches the top 10 users based on XP from the database.
-    Returns a list of dictionaries containing user data (ID, XP, nickname, avatar URL).
-    """
-    from db_server import cursor
-    cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
-    top_users_data = cursor.fetchall()
-
-    # Create a list of dictionaries with user details (ID, XP, nickname, avatar URL)
-    users_with_details = []
-    for user_id, xp in top_users_data:
-        member = await get_member(user_id)
-        if member:
-            nickname, avatar_url = member
-            users_with_details.append({
-                'user_id': user_id,
-                'xp': xp,
-                'nickname': nickname,
-                'avatar_url': avatar_url
-            })
-    return users_with_details
-  # Connect to the SQLite database
+# Connect to the SQLite database
 conn = sqlite3.connect(DATABASE_PATH, check_same_thread=False)
 cursor = conn.cursor()
-
 # Initialize tables and indexes
 def initialize_database():
     try:
@@ -281,11 +254,88 @@ async def reset_and_save_top_users(bot):
 # Example of running the reset task every 24 hours
 async def reset_task(bot):
     while True:
-        await asyncio.sleep(86400)  # Sleep for 24 hours
+        await asyncio.sleep(22)  # Sleep for 24 hours
         await reset_and_save_top_users(bot)
 
 # Initialize the database on script run
 initialize_database()
+
+
+# Cache for storing the previous top 10 users with more details (ID, XP, avatar URL, nickname)
+previous_top_10 = []  # A list of dictionaries to store user data
+
+# Modify the update function to save more information
+async def fetch_top_users_with_xp() -> List[Dict]:
+    """
+    Fetches the top 10 users based on XP from the database.
+    Returns a list of dictionaries containing user data (ID, XP, nickname, avatar URL).
+    """
+
+    cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
+    top_users_data = cursor.fetchall()
+
+    # Create a list of dictionaries with user details (ID, XP, nickname, avatar URL)
+    users_with_details = []
+    for user_id, xp in top_users_data:
+        member = await get_member(user_id)
+        if member:
+            nickname, avatar_url = member
+            users_with_details.append({
+                'user_id': user_id,
+                'xp': xp,
+                'nickname': nickname,
+                'avatar_url': avatar_url
+            })
+    return users_with_details
+
+# Function to check if a user has either of two roles by their role IDs
+async def has_either_role_by_ids(bot, user_id, role_id_1, role_id_2):
+    try:
+        # Get the guild (replace with your actual GUILD_ID)
+        guild = bot.get_guild(GUILD_ID)
+        
+        if guild is None:
+            print("Guild not found.")
+            return False
+
+        # Fetch the member using user_id
+        member = guild.get_member(user_id)
+        
+        if member is None:
+            print("Member not found.")
+            return False
+
+        # Check if the member has either of the two roles
+        for role in member.roles:
+            if role.id == role_id_1 or role.id == role_id_2:
+                return True
+        
+        return False
+    except discord.DiscordException as e:
+        print(f"Error checking roles: {e}")
+        return False
+
+
+# Fetch top 10 users with XP and check their roles
+async def fetch_top_10_users_and_check_roles(bot, role_id_1, role_id_2):
+    cursor.execute('''
+        SELECT user_id, xp FROM user_xp
+        ORDER BY xp DESC
+        LIMIT 10
+    ''')
+    top_users = cursor.fetchall()
+
+    # List to store users who have the required role
+    users_with_role = []
+
+    # Iterate over the top 10 users and check if they have either role
+    for user_id, xp in top_users:
+        has_role = await has_either_role_by_ids(bot, user_id, role_id_1, role_id_2)
+        if has_role:
+            users_with_role.append({'user_id': user_id, 'xp': xp})
+
+    return users_with_role
+
 
 # Function to download the font if not already cached
 def download_font():
@@ -534,54 +584,6 @@ async def create_leaderboard_image():
 async def live(ctx):
     """Command to immediately send the live leaderboard to the user's channel."""
     await update_leaderboard(ctx)
-# Function to check if a user has either of two roles by their role IDs
-async def has_either_role_by_ids(bot, user_id, role_id_1, role_id_2):
-    try:
-        # Get the guild (replace with your actual GUILD_ID)
-        guild = bot.get_guild(GUILD_ID)
-        
-        if guild is None:
-            print("Guild not found.")
-            return False
-
-        # Fetch the member using user_id
-        member = guild.get_member(user_id)
-        
-        if member is None:
-            print("Member not found.")
-            return False
-
-        # Check if the member has either of the two roles
-        for role in member.roles:
-            if role.id == role_id_1 or role.id == role_id_2:
-                return True
-        
-        return False
-    except discord.DiscordException as e:
-        print(f"Error checking roles: {e}")
-        return False
-
-
-# Fetch top 10 users with XP and check their roles
-async def fetch_top_10_users_and_check_roles(bot, role_id_1, role_id_2):
-    cursor.execute('''
-        SELECT user_id, xp FROM user_xp
-        ORDER BY xp DESC
-        LIMIT 10
-    ''')
-    top_users = cursor.fetchall()
-
-    # List to store users who have the required role
-    users_with_role = []
-
-    # Iterate over the top 10 users and check if they have either role
-    for user_id, xp in top_users:
-        has_role = await has_either_role_by_ids(bot, user_id, role_id_1, role_id_2)
-        if has_role:
-            users_with_role.append({'user_id': user_id, 'xp': xp})
-
-    return users_with_role
-
 
 @tasks.loop(seconds=20)
 async def update_leaderboard(ctx=None):
