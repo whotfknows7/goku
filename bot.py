@@ -70,8 +70,8 @@ async def reset_database():
          
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
-    await save_user_to_clan_role_table() # Save the top 10 users' XP before reset
-    await reset_database
+    await save_user_to_clan_role_table(bot, user_id, xp) # Save the top 10 users' XP before reset
+    await reset_database()
     # Reset the user_xp table
     cursor.execute("DELETE FROM user_xp;")
     conn.commit()
