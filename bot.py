@@ -590,6 +590,52 @@ async def save_user_to_clan_role_table(bot, user_id, xp):
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for user {user_id} in the clan role table: {e}\n")
 
+# Function to calculate the total XP for a specific clan
+async def calculate_clan_xp(clan_role: str):
+    try:
+        # Fetch all users from the clan table based on the specified clan role
+        cursor.execute(f"SELECT user_id, xp FROM {clan_role}")
+        users_xp = cursor.fetchall()
+
+        # Sum all the XP values
+        total_xp = sum(user[1] for user in users_xp)
+
+        return total_xp
+    except sqlite3.Error as e:
+        print(f"Error calculating XP for {clan_role}: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error calculating XP for {clan_role}: {e}\n")
+        return 0
+
+# Function to create and send a leaderboard comparison embed
+async def send_clan_comparison_leaderboard(ctx):
+    # Calculate total XP for both clans
+    total_xp_clan_1 = await calculate_clan_xp("clan_role_1")
+    total_xp_clan_2 = await calculate_clan_xp("clan_role_2")
+
+    # Compare the total XP of both clans
+    if total_xp_clan_1 > total_xp_clan_2:
+        comparison_result = f"**Clan Role 1** has more XP than **Clan Role 2** by {total_xp_clan_1 - total_xp_clan_2} XP!"
+    elif total_xp_clan_2 > total_xp_clan_1:
+        comparison_result = f"**Clan Role 2** has more XP than **Clan Role 1** by {total_xp_clan_2 - total_xp_clan_1} XP!"
+    else:
+        comparison_result = "**Both clans have equal XP!**"
+
+    # Create an embed to display the comparison
+    embed = discord.Embed(title="Clan XP Comparison", description="Here is the current XP comparison between the clans:", color=discord.Color.blue())
+    embed.add_field(name="Total XP - Clan Role 1", value=str(total_xp_clan_1), inline=True)
+    embed.add_field(name="Total XP - Clan Role 2", value=str(total_xp_clan_2), inline=True)
+    embed.add_field(name="Comparison Result", value=comparison_result, inline=False)
+    
+    # Send the embed message to the desired channel (for example, leaderboard channel)
+    channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)  # Change to the desired channel ID
+    await channel.send(embed=embed)
+
+# Example command to trigger the leaderboard comparison
+@bot.command(name='compare_clans')
+async def compare_clans(ctx):
+    await send_clan_comparison_leaderboard(ctx)
+
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
