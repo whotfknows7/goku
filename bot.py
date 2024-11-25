@@ -147,6 +147,7 @@ async def on_message(message):
     total_xp = character_xp + emoji_xp
 
     # Update user data
+    from db_server import update_user_xp
     update_user_xp(user_id, total_xp)
 
     await bot.process_commands(message)
