@@ -10,7 +10,11 @@ import os
 import re
 import emoji
 from typing import List, Dict
-from db_server import cursor
+import sqlite3
+
+conn = sqlite3.connect('database.db', check_same_thread=False)
+cursor = conn.cursor()
+
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -69,12 +73,21 @@ async def reset_database():
             log_file.write(f"Error resetting the database: {e}\n")
          
 # Function to reset the database and perform the save operation
+# Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
-    await save_user_to_clan_role_table(bot, user_id, xp) # Save the top 10 users' XP before reset
+
+    # Fetch top 10 users with their XP
+    top_users = await fetch_top_10_users_and_check_roles(bot, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
+
+    # Save each user's XP before resetting the database
+    for user in top_users:
+        user_id = user['user_id']
+        xp = user['xp']
+        await save_user_to_clan_role_table(bot, user_id, xp)  # Save the top 10 users' XP before reset
+
+    # Now reset the database
     await reset_database()
-    # Reset the user_xp table
-    cursor.execute("DELETE FROM user_xp;")
-    conn.commit()
+
     print("XP data reset and top users saved.")
 
 # Example of running the reset task every 24 hours
