@@ -16,11 +16,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Channel IDs
+GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
 LEADERBOARD_CHANNEL_ID = 1303672077068537916
-GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
 CLAN_ROLE_2_ID = 1247225208700665856
+DATABASE_PATH = 'database.db'  # Path to your database file
+
+
 # Define intents
 intents = discord.Intents.default()
 intents.members = True
