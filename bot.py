@@ -10,6 +10,7 @@ import os
 import re
 import emoji
 from typing import List, Dict
+from db_server import cursor
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -53,8 +54,36 @@ async def on_resumed():
 @bot.event
 async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred: {event}, {args}, {kwargs}")
- 
 
+
+# Function to reset the database (clear all XP data)
+async def reset_database():
+    try:
+        cursor.execute("BEGIN TRANSACTION;")
+        cursor.execute("DELETE FROM user_xp;")  # Clears all XP data
+        conn.commit()
+        print("Database has been reset.")
+    except sqlite3.Error as e:
+        conn.rollback()
+        print(f"Error resetting the database: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error resetting the database: {e}\n")
+         
+# Function to reset the database and perform the save operation
+async def reset_and_save_top_users():
+    await save_user_to_clan_role_table  # Save the top 10 users' XP before reset
+    await reset_database
+    # Reset the user_xp table
+    cursor.execute("DELETE FROM user_xp;")
+    conn.commit()
+    print("XP data reset and top users saved.")
+
+# Example of running the reset task every 24 hours
+async def reset_task():
+    while True:
+        await asyncio.sleep(22)  # Sleep for 24 hours (86400 seconds)
+        await reset_and_save_top_users()
+         
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -117,7 +146,7 @@ async def fetch_top_users_with_xp() -> List[Dict]:
     Fetches the top 10 users based on XP from the database.
     Returns a list of dictionaries containing user data (ID, XP, nickname, avatar URL).
     """
-    from db_server import cursor
+    
     cursor.execute("SELECT user_id, xp FROM user_xp ORDER BY xp DESC LIMIT 10")
     top_users_data = cursor.fetchall()
 
