@@ -1,12 +1,11 @@
-
 import sqlite3
 import time
 import asyncio
 
 
-GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
-CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
-CLAN_ROLE_2_ID = 1247225208700665856
+CLAN_ROLE_1_ID = 1247225208700665856  # Replace with your actual role ID
+CLAN_ROLE_2_ID = 1245407423917854754  # Replace with your actual role ID
+
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
@@ -89,7 +88,7 @@ def update_bulk_xp(user_xp_data):
         print(f"Error bulk updating XP: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error bulk updating XP: {e}\n")
-            
+
 # Function to reset the database (clear all XP data)
 async def reset_database():
     try:
@@ -102,18 +101,4 @@ async def reset_database():
         print(f"Error resetting the database: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
-         
-# Function to reset the database and perform the save operation
-async def reset_and_save_top_users():
-    await save_user_to_clan_role_table()  # Save the top 10 users' XP before reset
-    
-    # Reset the user_xp table
-    cursor.execute("DELETE FROM user_xp;")
-    conn.commit()
-    print("XP data reset and top users saved.")
-
-# Example of running the reset task every 24 hours
-async def reset_task():
-    while True:
-        await asyncio.sleep(22)  # Sleep for 24 hours (86400 seconds)
-        await reset_and_save_top_users()
+            
