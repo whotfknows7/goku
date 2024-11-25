@@ -501,34 +501,40 @@ async def update_leaderboard(ctx=None):
 async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
-   
-# Function to check if a user has either of two roles by their role IDs
+    
 async def has_either_role_by_ids(bot, user_id, role_id_1, role_id_2):
     try:
         # Get the guild (replace with your actual GUILD_ID)
         guild = bot.get_guild(GUILD_ID)
-        
+
         if guild is None:
             print("Guild not found.")
             return False
 
-        # Fetch the member using user_id
-        member = guild.get_member(user_id)
-        
-        if member is None:
-            print("Member not found.")
+        # Fetch the member using user_id (use fetch_member to get from API)
+        try:
+            member = await guild.fetch_member(user_id)
+        except discord.NotFound:
+            print(f"Member with ID {user_id} not found.")
+            return False
+        except discord.DiscordException as e:
+            print(f"Error fetching member with ID {user_id}: {e}")
             return False
 
+        # Log member roles for debugging
+        print(f"Checking roles for member {user_id} ({member.name})")
+        
         # Check if the member has either of the two roles
         for role in member.roles:
             if role.id == role_id_1 or role.id == role_id_2:
+                print(f"User {user_id} has one of the required roles.")
                 return True
         
+        print(f"User {user_id} does not have the required roles.")
         return False
     except discord.DiscordException as e:
-        print(f"Error checking roles: {e}")
+        print(f"Error checking roles for user {user_id}: {e}")
         return False
-
 
 # Fetch top 10 users with XP and check their roles
 async def fetch_top_10_users_and_check_roles(bot, role_id_1, role_id_2):
@@ -549,15 +555,15 @@ async def fetch_top_10_users_and_check_roles(bot, role_id_1, role_id_2):
             users_with_role.append({'user_id': user_id, 'xp': xp})
 
     return users_with_role
-# Function to save/update user XP in the correct clan role table
+  
 async def save_user_to_clan_role_table(bot, user_id, xp):
     try:
         # Check if the user has the relevant clan role using the bot
-        has_role_1 = await bot.has_either_role_by_ids(user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
+        has_role_1 = await has_either_role_by_ids(bot, user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
 
         if has_role_1:
             # Determine the correct table based on the clan role
-            if await bot.has_either_role_by_ids(user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID):
+            if await has_either_role_by_ids(bot, user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID):
                 clan_role = 'clan_role_1'
             else:
                 clan_role = 'clan_role_2'
@@ -583,7 +589,7 @@ async def save_user_to_clan_role_table(bot, user_id, xp):
         print(f"Error saving XP for user {user_id} in the clan role table: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for user {user_id} in the clan role table: {e}\n")
-        
+
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
