@@ -613,20 +613,11 @@ async def send_clan_comparison_leaderboard(ctx):
     total_xp_clan_1 = await calculate_clan_xp("clan_role_1")
     total_xp_clan_2 = await calculate_clan_xp("clan_role_2")
 
-    # Compare the total XP of both clans
-    if total_xp_clan_1 > total_xp_clan_2:
-        comparison_result = f"**Clan Role 1** has more XP than **Clan Role 2** by {total_xp_clan_1 - total_xp_clan_2} XP!"
-    elif total_xp_clan_2 > total_xp_clan_1:
-        comparison_result = f"**Clan Role 2** has more XP than **Clan Role 1** by {total_xp_clan_2 - total_xp_clan_1} XP!"
-    else:
-        comparison_result = "**Both clans have equal XP!**"
-
     # Prepare the message
     comparison_message = (
-        f"**Clan XP Comparison**\n"
-        f"Total XP - Clan Role 1: {total_xp_clan_1}\n"
-        f"Total XP - Clan Role 2: {total_xp_clan_2}\n"
-        f"{comparison_result}"
+        f"**🏆 Weekly Clan Leaderboard! 🏆**\n"
+        f"Nigga Gang: {total_xp_clan_1}\n"
+        f"Namikaze: {total_xp_clan_2}\n"
     )
 
     # Send the message to the desired channel (for example, leaderboard channel)
