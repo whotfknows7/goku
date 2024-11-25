@@ -615,9 +615,9 @@ async def send_clan_comparison_leaderboard(ctx):
 
     # Prepare the message
     comparison_message = (
-        f"**🏆 Weekly Clan Leaderboard! 🏆**\n"
-        f"#️⃣1️⃣ Nigga Gang: `{total_xp_clan_1}` XP Pts\n"
-        f"#️⃣2️⃣ Namikaze: `{total_xp_clan_2}` XP Pts\n"
+        f"**🏆 Weekly Clan Leaderboard! 🏆**\n\n"  # Added newline after heading
+        f"#️⃣1️⃣ <@&{CLAN_ROLE_1_ID}>     `{total_xp_clan_1}` XP Pts\n"  # Ping Clan Role 1
+        f"#️⃣2️⃣ <@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2}` XP Pts\n"  # Ping Clan Role 2
     )
 
     # Send the message to the desired channel (for example, leaderboard channel)
