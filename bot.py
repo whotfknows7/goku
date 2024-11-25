@@ -55,69 +55,6 @@ async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred: {event}, {args}, {kwargs}")
  
 
-# Function to save/update user XP in the correct clan role table
-async def save_user_to_clan_role_table(bot, user_id, xp):
-    try:
-        # Check if the user has the relevant clan role using the bot
-        has_role_1 = await bot.has_either_role_by_ids(user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
-
-        if has_role_1:
-            # Determine the correct table based on the clan role
-            if await bot.has_either_role_by_ids(user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID):
-                clan_role = 'clan_role_1'
-            else:
-                clan_role = 'clan_role_2'
-
-            # Check if the user already exists in the table
-            cursor.execute(f"SELECT xp FROM {clan_role} WHERE user_id = ?", (user_id,))
-            existing_xp = cursor.fetchone()
-
-            if existing_xp:
-                # User exists, update their XP
-                new_xp = existing_xp[0] + xp
-                cursor.execute(f"UPDATE {clan_role} SET xp = ? WHERE user_id = ?", (new_xp, user_id))
-            else:
-                # New user, insert their XP
-                cursor.execute(f"INSERT INTO {clan_role} (user_id, xp) VALUES (?, ?)", (user_id, xp))
-
-            # Commit the changes to the database
-            conn.commit()
-            print(f"XP for user {user_id} updated in {clan_role} table.")
-        else:
-            print(f"User {user_id} does not have the correct role.")
-    except sqlite3.Error as e:
-        print(f"Error saving XP for user {user_id} in the clan role table: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for user {user_id} in the clan role table: {e}\n")
-
-# Function to reset the database (clear all XP data)
-async def reset_database():
-    try:
-        cursor.execute("BEGIN TRANSACTION;")
-        cursor.execute("DELETE FROM user_xp;")  # Clears all XP data
-        conn.commit()
-        print("Database has been reset.")
-    except sqlite3.Error as e:
-        conn.rollback()
-        print(f"Error resetting the database: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"Error resetting the database: {e}\n")
-         
-# Function to reset the database and perform the save operation
-async def reset_and_save_top_users():
-    await save_user_to_clan_role_table  # Save the top 10 users' XP before reset
-    await reset_database
-    # Reset the user_xp table
-    cursor.execute("DELETE FROM user_xp;")
-    conn.commit()
-    print("XP data reset and top users saved.")
-
-# Example of running the reset task every 24 hours
-async def reset_task():
-    while True:
-        await asyncio.sleep(22)  # Sleep for 24 hours (86400 seconds)
-        await reset_and_save_top_users()
-
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -216,6 +153,7 @@ def download_font():
 # Function to fetch member details
 async def get_member(user_id):
     try:
+        from db_server import delete_user_data
         guild = bot.get_guild(GUILD_ID)
         if not guild:
             logger.error(f"Guild with ID {GUILD_ID} not found")
@@ -228,14 +166,12 @@ async def get_member(user_id):
             return nickname, avatar_url
         else:
             # If member is not found (i.e., they left the server), clean up the data
-             from db_server import delete_user_data
             delete_user_data(user_id)  # Clean up the data from the database
             return None
     except discord.HTTPException as e:
         # Handle HTTP exceptions (e.g., member not found)
         if e.code == 10007:  # Member not found
-            from db_server import delete_user_data
-            delete_user_data(user_id)  # Clean up data if user is not in the guild anymore
+            delete_user_data(user_id)
             return None
         else:
             logger.error(f"Failed to fetch member {user_id} in guild {GUILD_ID}: {e}")
