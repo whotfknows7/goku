@@ -160,7 +160,6 @@ async def reset_and_save_top_users():
     print("XP data reset and top users saved.")
 
 # Example of running the reset task every 24 hours
-@tasks.loop(seconds=20)
 async def reset_task():
     while True:
         await asyncio.sleep(22)  # Sleep for 24 hours (86400 seconds)

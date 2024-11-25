@@ -39,10 +39,9 @@ cached_image_path = "leaderboard.png"
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 @bot.event
 async def on_ready():
-    from db_server import reset_task
     logger.info(f"Bot logged in as {bot.user.name}")
     update_leaderboard.start()  # Ensure your leaderboard update function is also running
-    
+    bot.loop.create_task(reset_task())
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Attempting to reconnect...")
@@ -68,7 +67,6 @@ def is_emoji(char):
 # Bot event for incoming messages
 @bot.event
 async def on_message(message):
-    from db_server import update_user_xp
     if message.author.bot:
         return
 
@@ -86,6 +84,7 @@ async def on_message(message):
     total_xp = character_xp + emoji_xp
 
     # Update user data
+    from db_server import update_user_xp
     update_user_xp(user_id, total_xp)
 
     await bot.process_commands(message)
