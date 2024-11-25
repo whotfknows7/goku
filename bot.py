@@ -109,7 +109,7 @@ async def reset_clan_xp():
             log_file.write(f"Error resetting clan XP tables: {e}\n")
 
 # Periodic task that runs every 1 week
-@tasks.loop(weeks=1)  # Run every 1 week
+@tasks.loop(minutes=10080)  # Run every 1 week
 async def reset_weekly():
     await reset_clan_xp()        
         
