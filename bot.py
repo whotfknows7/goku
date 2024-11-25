@@ -93,7 +93,7 @@ async def reset_and_save_top_users():
 # Example of running the reset task every 24 hours
 async def reset_task():
     while True:
-        await asyncio.sleep(22)  # Sleep for 24 hours (86400 seconds)
+        await asyncio.sleep(60)  # Sleep for 24 hours (86400 seconds)
         await reset_and_save_top_users()
          
 # Function to count custom emojis in a message
@@ -622,7 +622,7 @@ async def send_clan_comparison_leaderboard(ctx):
         comparison_result = "**Both clans have equal XP!**"
 
     # Create an embed to display the comparison
-    embed = discord.Embed(title="Clan XP Comparison", description="Here is the current XP comparison between the clans:", color=discord.Color.blue())
+    embed = discord.Embed(title="Weekly Clan Leaderboard!", description="Here is the current XP comparison between the clans:", color=discord.Color.blue())
     embed.add_field(name="Total XP - Clan Role 1", value=str(total_xp_clan_1), inline=True)
     embed.add_field(name="Total XP - Clan Role 2", value=str(total_xp_clan_2), inline=True)
     embed.add_field(name="Comparison Result", value=comparison_result, inline=False)
@@ -632,7 +632,7 @@ async def send_clan_comparison_leaderboard(ctx):
     await channel.send(embed=embed)
 
 # Example command to trigger the leaderboard comparison
-@bot.command(name='compare_clans')
+@bot.command(name='clan')
 async def compare_clans(ctx):
     await send_clan_comparison_leaderboard(ctx)
 
