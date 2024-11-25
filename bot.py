@@ -55,7 +55,6 @@ async def on_resumed():
 async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred: {event}, {args}, {kwargs}")
 
-
 # Function to reset the database (clear all XP data)
 async def reset_database():
     try:
@@ -71,7 +70,7 @@ async def reset_database():
          
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
-    await save_user_to_clan_role_table  # Save the top 10 users' XP before reset
+    await save_user_to_clan_role_table() # Save the top 10 users' XP before reset
     await reset_database
     # Reset the user_xp table
     cursor.execute("DELETE FROM user_xp;")
@@ -489,8 +488,7 @@ async def update_leaderboard(ctx=None):
 async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
-
-
+   
 # Function to check if a user has either of two roles by their role IDs
 async def has_either_role_by_ids(bot, user_id, role_id_1, role_id_2):
     try:
@@ -538,7 +536,41 @@ async def fetch_top_10_users_and_check_roles(bot, role_id_1, role_id_2):
             users_with_role.append({'user_id': user_id, 'xp': xp})
 
     return users_with_role
+# Function to save/update user XP in the correct clan role table
+async def save_user_to_clan_role_table(bot, user_id, xp):
+    try:
+        # Check if the user has the relevant clan role using the bot
+        has_role_1 = await bot.has_either_role_by_ids(user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
 
+        if has_role_1:
+            # Determine the correct table based on the clan role
+            if await bot.has_either_role_by_ids(user_id, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID):
+                clan_role = 'clan_role_1'
+            else:
+                clan_role = 'clan_role_2'
+
+            # Check if the user already exists in the table
+            cursor.execute(f"SELECT xp FROM {clan_role} WHERE user_id = ?", (user_id,))
+            existing_xp = cursor.fetchone()
+
+            if existing_xp:
+                # User exists, update their XP
+                new_xp = existing_xp[0] + xp
+                cursor.execute(f"UPDATE {clan_role} SET xp = ? WHERE user_id = ?", (new_xp, user_id))
+            else:
+                # New user, insert their XP
+                cursor.execute(f"INSERT INTO {clan_role} (user_id, xp) VALUES (?, ?)", (user_id, xp))
+
+            # Commit the changes to the database
+            conn.commit()
+            print(f"XP for user {user_id} updated in {clan_role} table.")
+        else:
+            print(f"User {user_id} does not have the correct role.")
+    except sqlite3.Error as e:
+        print(f"Error saving XP for user {user_id} in the clan role table: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for user {user_id} in the clan role table: {e}\n")
+        
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
