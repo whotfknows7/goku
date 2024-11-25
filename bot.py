@@ -614,7 +614,7 @@ async def send_clan_comparison_leaderboard(ctx):
     total_xp_clan_2 = await calculate_clan_xp("clan_role_2")
     
     # Prepare the message
-    one_emoji = ":1310686608109862962:"
+    one_emoji = ":One:1310686608109862962:"
     two_emoji = ":1310686637902004224:"
     comparison_message = (
         f"**🏆 Weekly Clan Leaderboard! 🏆**\n\n"  # Added newline after heading
