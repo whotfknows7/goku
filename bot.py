@@ -71,8 +71,7 @@ async def reset_database():
         print(f"Error resetting the database: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
-         
-# Function to reset the database and perform the save operation
+
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
 
@@ -95,7 +94,25 @@ async def reset_task():
     while True:
         await asyncio.sleep(86400)  # Sleep for 24 hours (86400 seconds)
         await reset_and_save_top_users()
-         
+
+# Database reset function for both clans
+async def reset_clan_xp():
+    try:
+        # Reset XP for both clans
+        cursor.execute("DELETE FROM clan_role_1")  # Reset table for Clan 1
+        cursor.execute("DELETE FROM clan_role_2")  # Reset table for Clan 2
+        conn.commit()
+        print("Clan XP tables have been reset.")
+    except sqlite3.Error as e:
+        print(f"Error resetting clan XP tables: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"Error resetting clan XP tables: {e}\n")
+
+# Periodic task that runs every 1 week
+@tasks.loop(weeks=1)  # Run every 1 week
+async def reset_weekly():
+    await reset_clan_xp()        
+        
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
