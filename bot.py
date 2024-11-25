@@ -590,6 +590,23 @@ async def save_user_to_clan_role_table(bot, user_id, xp):
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for user {user_id} in the clan role table: {e}\n")
 
+# Function to calculate the total XP for a specific clan
+async def calculate_clan_xp(clan_role: str):
+    try:
+        # Fetch all users from the clan table based on the specified clan role
+        cursor.execute(f"SELECT user_id, xp FROM {clan_role}")
+        users_xp = cursor.fetchall()
+
+        # Sum all the XP values
+        total_xp = sum(user[1] for user in users_xp)
+
+        return total_xp
+    except sqlite3.Error as e:
+        print(f"Error calculating XP for {clan_role}: {e}")
+        with open("error_log.txt", "a") as log_file:
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error calculating XP for {clan_role}: {e}\n")
+        return 0
+
 # Function to create and send a leaderboard comparison message
 async def send_clan_comparison_leaderboard(ctx):
     # Calculate total XP for both clans
@@ -617,7 +634,7 @@ async def send_clan_comparison_leaderboard(ctx):
     await channel.send(comparison_message)
 
 # Example command to trigger the leaderboard comparison
-@bot.command(name='clan')
+@bot.command(name='clans')
 async def compare_clans(ctx):
     await send_clan_comparison_leaderboard(ctx)
 
