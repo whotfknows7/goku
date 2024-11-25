@@ -612,12 +612,14 @@ async def send_clan_comparison_leaderboard(ctx):
     # Calculate total XP for both clans
     total_xp_clan_1 = await calculate_clan_xp("clan_role_1")
     total_xp_clan_2 = await calculate_clan_xp("clan_role_2")
-
+    
     # Prepare the message
+    one_emoji = ":1310686608109862962:"
+    two_emoji = ":1310686637902004224:"
     comparison_message = (
         f"**🏆 Weekly Clan Leaderboard! 🏆**\n\n"  # Added newline after heading
-        f":One: <@&{CLAN_ROLE_1_ID}>     `{total_xp_clan_1}` XP Pts\n"  # Ping Clan Role 1
-        f":pink_two: <@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2}` XP Pts\n"  # Ping Clan Role 2
+        f"{one_emoji} <@&{CLAN_ROLE_1_ID}>     `{total_xp_clan_1}` XP Pts\n"  # Ping Clan Role 1
+        f"{two_emoji} <@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2}` XP Pts\n"  # Ping Clan Role 2
     )
 
     # Send the message to the desired channel (for example, leaderboard channel)
