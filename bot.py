@@ -24,8 +24,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Channel IDs
-RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
-LAST_RESET_TIME_FILE = "last_reset_time.txt"  # File to track last reset time
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
 LEADERBOARD_CHANNEL_ID = 1303672077068537916
 GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
@@ -49,12 +47,26 @@ cached_image_path = "leaderboard.png"
 
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
+
 @bot.event
 async def on_ready():
-    logger.info(f"Bot logged in as {bot.user.name}")
-    update_leaderboard.start()  # Ensure your leaderboard update function is also running
-    bot.loop.create_task(reset_task())
-    reset_weekly.start()  # Start the weekly reset task
+    try:
+        logger.info(f"Bot logged in as {bot.user.name}")
+
+        # Ensure the update leaderboard task is running
+        update_leaderboard.start()
+
+        # Ensure the reset task is scheduled properly
+        if not reset_task.is_running():
+            bot.loop.create_task(reset_task())
+
+        # Start the weekly reset task (ensure it's running)
+        if not reset_weekly.is_running():
+            reset_weekly.start()
+
+    except Exception as e:
+        logger.error(f"Error in on_ready: {e}")
+
 
 @bot.event
 async def on_disconnect():
@@ -71,15 +83,24 @@ async def on_error(event, *args, **kwargs):
 # Function to read the last reset time from the file
 def read_last_reset_time():
     try:
+        if not os.path.exists(LAST_RESET_TIME_FILE):
+            # If the file doesn't exist, initialize it with the current time
+            write_last_reset_time()
+            return datetime.now()  # Return the current time as the last reset time
+
         with open(LAST_RESET_TIME_FILE, "r") as file:
             return datetime.fromisoformat(file.read().strip())  # Read last reset time
-    except FileNotFoundError:
-        return None  # If no file, it means it hasn't reset before
+    except Exception as e:
+        logger.error(f"Error reading last reset time: {e}")
+        return None  # Return None if there’s an error
 
 # Function to write the last reset time to the file
 def write_last_reset_time():
-    with open(LAST_RESET_TIME_FILE, "w") as file:
-        file.write(datetime.now().isoformat())  # Store current time as last reset time
+    try:
+        with open(LAST_RESET_TIME_FILE, "w") as file:
+            file.write(datetime.now().isoformat())  # Store current time as last reset time
+    except Exception as e:
+        logger.error(f"Error writing last reset time: {e}")
 
 # Function to calculate the remaining time before the next reset
 def time_remaining_until_reset():
@@ -636,12 +657,12 @@ async def send_clan_comparison_leaderboard():
     # Calculate total XP for both clans
     total_xp_clan_1 = await calculate_clan_xp("clan_role_1")
     total_xp_clan_2 = await calculate_clan_xp("clan_role_2")
-    
+
     # Prepare the message with emojis and clan info
     one_emoji = "<a:One:1310686608109862962>"
     two_emoji = "<a:pink_two:1310686637902004224>"
     dash_blue = "<:dash_blue:1310695526244552824>"
-    
+
     # Prepare the message
     comparison_message = (
         f"**🏆  Weekly Clan Leaderboard!  🏆**\n\n"  # Added newline after heading
@@ -649,41 +670,21 @@ async def send_clan_comparison_leaderboard():
         f"{two_emoji}{dash_blue}<@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2:,}` XP Pts\n"  # Ping Clan Role 2
     )
 
-    # Send the message to the desired channel (for example, leaderboard channel)
+    # Send the message to the desired channel
     channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)  # Change to the desired channel ID
     await channel.send(comparison_message)
-    
-# Example command to trigger the leaderboard comparison
-@bot.command(name='clans')
-async def compare_clans(ctx):
-    await send_clan_comparison_leaderboard(ctx)
 
 # Periodic task that runs every 1 week (604800 seconds)
 @tasks.loop(seconds=10)  # Run every 10 seconds for testing; change to 604800 (1 week) for actual use
 async def reset_weekly():
-    # Calculate time remaining until the next reset
-    remaining_time = time_remaining_until_reset()
-    print(f"Time remaining until next reset: {remaining_time}")
+    try:
+        # Calculate time remaining until the next reset
+        remaining_time = time_remaining_until_reset()
+        print(f"Time remaining until next reset: {remaining_time}")
 
-    if remaining_time > timedelta(0):
-        # Wait until the time remaining for reset is over
-        await asyncio.sleep(remaining_time.total_seconds())
-
-    # Send the leaderboard before resetting
-    await send_clan_comparison_leaderboard()
-
-    # Reset the clan XP tables after sending the leaderboard
-    await reset_clan_xp()
-
-    # Save top users and reset XP data
-    await reset_and_save_top_users()
-
-    # Update the last reset time
-    write_last_reset_time()
-
-    # Wait for the next reset cycle (1 week)
-    await asyncio.sleep(RESET_INTERVAL.total_seconds())
-    
+        if remaining_time > timedelta(0):
+            # Wait until the time remaining for reset is over
+            await asyncio.sleep(remaining_time.total_seconds
     
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
