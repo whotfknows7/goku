@@ -108,11 +108,15 @@ async def reset_clan_xp():
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting clan XP tables: {e}\n")
 
-# Periodic task that runs every 1 week
-@tasks.loop(minutes=10080)  # Run every 1 week
+# Periodic task that runs every 1 week (604800 seconds)
+@tasks.loop(seconds=604800)  # Run every 604,800 seconds (1 week)
 async def reset_weekly():
-    await reset_clan_xp()        
-        
+    # Send the leaderboard before resetting
+    await send_clan_comparison_leaderboard()
+
+    # Reset the clan XP tables after sending the leaderboard
+    await reset_clan_xp()
+       
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -607,48 +611,34 @@ async def save_user_to_clan_role_table(bot, user_id, xp):
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error saving XP for user {user_id} in the clan role table: {e}\n")
 
-# Function to calculate the total XP for a specific clan
-async def calculate_clan_xp(clan_role: str):
-    try:
-        # Fetch all users from the clan table based on the specified clan role
-        cursor.execute(f"SELECT user_id, xp FROM {clan_role}")
-        users_xp = cursor.fetchall()
+# Function to calculate total XP for a clan
+async def calculate_clan_xp(clan_role):
+    cursor.execute(f"SELECT SUM(xp) FROM {clan_role}")
+    result = cursor.fetchone()
+    return result[0] if result[0] is not None else 0
 
-        # Sum all the XP values
-        total_xp = sum(user[1] for user in users_xp)
-
-        return total_xp
-    except sqlite3.Error as e:
-        print(f"Error calculating XP for {clan_role}: {e}")
-        with open("error_log.txt", "a") as log_file:
-            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Error calculating XP for {clan_role}: {e}\n")
-        return 0
-
-# Function to create and send a leaderboard comparison message
-async def send_clan_comparison_leaderboard(ctx):
+# Function to send the clan leaderboard message
+async def send_clan_comparison_leaderboard():
     # Calculate total XP for both clans
     total_xp_clan_1 = await calculate_clan_xp("clan_role_1")
     total_xp_clan_2 = await calculate_clan_xp("clan_role_2")
     
-    # Format the XP numbers with commas
-    total_xp_clan_1_formatted = f"{total_xp_clan_1:,}"
-    total_xp_clan_2_formatted = f"{total_xp_clan_2:,}"
-
-    # Prepare the message
+    # Prepare the message with emojis and clan info
     one_emoji = "<a:One:1310686608109862962>"
     two_emoji = "<a:pink_two:1310686637902004224>"
     dash_blue = "<:dash_blue:1310695526244552824>"
-
+    
+    # Prepare the message
     comparison_message = (
         f"**🏆  Weekly Clan Leaderboard!  🏆**\n\n"  # Added newline after heading
-        f"{one_emoji}{dash_blue}<@&{CLAN_ROLE_1_ID}>     `{total_xp_clan_1_formatted}` XP Pts\n"  # Ping Clan Role 1
-        f"{two_emoji}{dash_blue}<@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2_formatted}` XP Pts\n"  # Ping Clan Role 2
+        f"{one_emoji}{dash_blue}<@&{CLAN_ROLE_1_ID}>     `{total_xp_clan_1:,}` XP Pts\n"  # Ping Clan Role 1
+        f"{two_emoji}{dash_blue}<@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2:,}` XP Pts\n"  # Ping Clan Role 2
     )
 
     # Send the message to the desired channel (for example, leaderboard channel)
     channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)  # Change to the desired channel ID
     await channel.send(comparison_message)
-
+    
 # Example command to trigger the leaderboard comparison
 @bot.command(name='clans')
 async def compare_clans(ctx):
