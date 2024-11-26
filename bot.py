@@ -53,20 +53,22 @@ async def on_ready():
     try:
         logger.info(f"Bot logged in as {bot.user.name}")
 
-        # Ensure the update leaderboard task is running
-        update_leaderboard.start()
-
         # Ensure the reset task is scheduled properly
-        if not reset_task.is_running():
-            bot.loop.create_task(reset_task())
+        task_running = False
+        for task in asyncio.all_tasks():
+            if task.__name__ == 'reset_task':  # Check if task name matches
+                task_running = True
+                break
+        
+        if not task_running:
+            bot.loop.create_task(reset_task(), name='reset_task')  # Start reset_task in the background
 
         # Start the weekly reset task (ensure it's running)
         if not reset_weekly.is_running():
-            reset_weekly.start()
+            reset_weekly.start()  # Start the looped weekly task
 
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
-
 
 @bot.event
 async def on_disconnect():
@@ -123,6 +125,40 @@ async def reset_database():
         print(f"Error resetting the database: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
+            
+import logging
+from datetime import timedelta
+
+# Assuming RESET_INTERVAL is defined somewhere, e.g.:
+RESET_INTERVAL = timedelta(weeks=1)  # One week interval
+
+# Initialize logger (if not already done)
+logger = logging.getLogger(__name__)
+
+# Reset task that runs periodically
+async def reset_task():
+    while True:
+        try:
+            remaining_time = time_remaining_until_reset()
+            logger.info(f"Time remaining until next reset: {remaining_time}")
+
+            # If time remaining is greater than 0, wait for it
+            if remaining_time > timedelta(0):
+                await asyncio.sleep(remaining_time.total_seconds())
+
+            # Once the wait time is over, perform the reset
+            await reset_and_save_top_users()  # Reset XP data and save top users
+
+            # Update the last reset time
+            write_last_reset_time()
+
+            # Wait for the next interval (1 week) before running the reset task again
+            await asyncio.sleep(RESET_INTERVAL.total_seconds())
+
+        except Exception as e:
+            logger.error(f"Error in reset task: {e}")
+            # Wait before retrying in case of an error
+            await asyncio.sleep(60)  # Sleep for a minute before retrying if something goes wrong
 
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
@@ -675,7 +711,7 @@ async def send_clan_comparison_leaderboard():
     await channel.send(comparison_message)
 
 # Periodic task that runs every 1 week (604800 seconds)
-@tasks.loop(seconds=10)  # Run every 10 seconds for testing; change to 604800 (1 week) for actual use
+@tasks.loop(seconds=604800)  # Run every 604,800 seconds (1 week)
 async def reset_weekly():
     try:
         # Calculate time remaining until the next reset
@@ -684,8 +720,23 @@ async def reset_weekly():
 
         if remaining_time > timedelta(0):
             # Wait until the time remaining for reset is over
-            await asyncio.sleep(remaining_time.total_seconds
-    
+            await asyncio.sleep(remaining_time.total_seconds())
+
+        # Send the leaderboard before resetting
+        await send_clan_comparison_leaderboard()
+
+        # Reset the clan XP tables after sending the leaderboard
+        await reset_clan_xp()
+
+        # Save top users and reset XP data
+        await reset_and_save_top_users()
+
+        # Update the last reset time
+        write_last_reset_time()
+
+    except Exception as e:
+        logger.error(f"Error in reset_weekly task: {e}")
+
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
