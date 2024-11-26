@@ -529,38 +529,20 @@ async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
     await ctx.send(f'Yes Masta! {latency:.2f}ms')
     
+# Improved role checking logic
 async def has_either_role_by_ids(bot, user_id, role_id_1, role_id_2):
     try:
-        # Get the guild (replace with your actual GUILD_ID)
         guild = bot.get_guild(GUILD_ID)
-
         if guild is None:
-            print("Guild not found.")
             return False
-
-        # Fetch the member using user_id (use fetch_member to get from API)
-        try:
-            member = await guild.fetch_member(user_id)
-        except discord.NotFound:
-            print(f"Member with ID {user_id} not found.")
-            return False
-        except discord.DiscordException as e:
-            print(f"Error fetching member with ID {user_id}: {e}")
-            return False
-
-        # Log member roles for debugging
-        print(f"Checking roles for member {user_id} ({member.name})")
         
-        # Check if the member has either of the two roles
-        for role in member.roles:
-            if role.id == role_id_1 or role.id == role_id_2:
-                print(f"User {user_id} has one of the required roles.")
-                return True
-        
-        print(f"User {user_id} does not have the required roles.")
+        member = await guild.fetch_member(user_id)
+        # Check if user has the required role
+        if any(role.id == role_id_1 or role.id == role_id_2 for role in member.roles):
+            return True
         return False
     except discord.DiscordException as e:
-        print(f"Error checking roles for user {user_id}: {e}")
+        log_error(f"Error fetching member with ID {user_id}: {e}", "has_either_role_by_ids")
         return False
 
 # Fetch top 10 users with XP and check their roles
