@@ -24,11 +24,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Channel IDs
+RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
+LAST_RESET_TIME_FILE = "last_reset_time.txt"  # File to track last reset time
 ROLE_LOG_CHANNEL_ID = 1251143629943345204
 LEADERBOARD_CHANNEL_ID = 1303672077068537916
 GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
 CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
 CLAN_ROLE_2_ID = 1247225208700665856
+
 # Define intents
 intents = discord.Intents.default()
 intents.members = True
@@ -65,6 +68,28 @@ async def on_resumed():
 async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred: {event}, {args}, {kwargs}")
 
+# Function to read the last reset time from the file
+def read_last_reset_time():
+    try:
+        with open(LAST_RESET_TIME_FILE, "r") as file:
+            return datetime.fromisoformat(file.read().strip())  # Read last reset time
+    except FileNotFoundError:
+        return None  # If no file, it means it hasn't reset before
+
+# Function to write the last reset time to the file
+def write_last_reset_time():
+    with open(LAST_RESET_TIME_FILE, "w") as file:
+        file.write(datetime.now().isoformat())  # Store current time as last reset time
+
+# Function to calculate the remaining time before the next reset
+def time_remaining_until_reset():
+    last_reset_time = read_last_reset_time()
+    if last_reset_time is None:
+        return RESET_INTERVAL  # No last reset time, return 1 week interval
+    next_reset_time = last_reset_time + RESET_INTERVAL
+    remaining_time = next_reset_time - datetime.now()
+    return remaining_time if remaining_time > timedelta(0) else timedelta(0)  # Return remaining time or 0 if reset is overdue
+
 # Function to reset the database (clear all XP data)
 async def reset_database():
     try:
@@ -80,7 +105,6 @@ async def reset_database():
 
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
-
     # Fetch top 10 users with their XP
     top_users = await fetch_top_10_users_and_check_roles(bot, CLAN_ROLE_1_ID, CLAN_ROLE_2_ID)
 
@@ -92,16 +116,9 @@ async def reset_and_save_top_users():
 
     # Now reset the database
     await reset_database()
-
     print("XP data reset and top users saved.")
 
-# Example of running the reset task every 24 hours
-async def reset_task():
-    while True:
-        await asyncio.sleep(10)  # Sleep for 24 hours (86400 seconds)
-        await reset_and_save_top_users()
-
-# Database reset function for both clans
+# Function to reset clan XP tables for both clans
 async def reset_clan_xp():
     try:
         # Reset XP for both clans
@@ -113,16 +130,7 @@ async def reset_clan_xp():
         print(f"Error resetting clan XP tables: {e}")
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting clan XP tables: {e}\n")
-
-# Periodic task that runs every 1 week (604800 seconds)
-@tasks.loop(seconds=10)  # Run every 604,800 seconds (1 week)
-async def reset_weekly():
-    # Send the leaderboard before resetting
-    await send_clan_comparison_leaderboard()
-
-    # Reset the clan XP tables after sending the leaderboard
-    await reset_clan_xp()
-    
+            
 # Function to count custom emojis in a message
 def count_custom_emojis(content):
     custom_emoji_pattern = r'<a?:\w+:\d+>'
@@ -650,6 +658,33 @@ async def send_clan_comparison_leaderboard():
 async def compare_clans(ctx):
     await send_clan_comparison_leaderboard(ctx)
 
+# Periodic task that runs every 1 week (604800 seconds)
+@tasks.loop(seconds=10)  # Run every 10 seconds for testing; change to 604800 (1 week) for actual use
+async def reset_weekly():
+    # Calculate time remaining until the next reset
+    remaining_time = time_remaining_until_reset()
+    print(f"Time remaining until next reset: {remaining_time}")
+
+    if remaining_time > timedelta(0):
+        # Wait until the time remaining for reset is over
+        await asyncio.sleep(remaining_time.total_seconds())
+
+    # Send the leaderboard before resetting
+    await send_clan_comparison_leaderboard()
+
+    # Reset the clan XP tables after sending the leaderboard
+    await reset_clan_xp()
+
+    # Save top users and reset XP data
+    await reset_and_save_top_users()
+
+    # Update the last reset time
+    write_last_reset_time()
+
+    # Wait for the next reset cycle (1 week)
+    await asyncio.sleep(RESET_INTERVAL.total_seconds())
+    
+    
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
