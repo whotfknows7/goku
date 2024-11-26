@@ -66,9 +66,11 @@ async def on_ready():
         if not reset_weekly.is_running():
             reset_weekly.start()  # Start the looped weekly task
 
+        # Ensure your leaderboard update function is also running
+        update_leaderboard.start()  # Ensure leaderboard update function is running
+
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
-
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Attempting to reconnect...")
