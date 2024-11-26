@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import logging
 import asyncio
+from datetime import datetime, timedelta
 import time
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import requests
@@ -12,6 +13,9 @@ import emoji
 from typing import List, Dict
 import sqlite3
 
+# Constants
+RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
+LAST_RESET_TIME_FILE = "last_reset_time.txt"  # File to track last reset time
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
 
