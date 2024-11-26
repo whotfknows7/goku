@@ -92,8 +92,14 @@ async def reset_and_save_top_users():
 # Example of running the reset task every 24 hours
 async def reset_task():
     while True:
-        await asyncio.sleep(86400)  # Sleep for 24 hours (86400 seconds)
-        await reset_and_save_top_users()
+        # Wait for 7 days (604800 seconds) before executing the reset task
+        await asyncio.sleep(10080 * 60)  # Sleep for 1 week (604800 seconds)
+
+        # Send the clan leaderboard before resetting the XP data
+        await send_clan_comparison_leaderboard()
+
+        # Reset the clan XP data after sending the leaderboard
+        await reset_clan_xp()
 
 # Database reset function for both clans
 async def reset_clan_xp():
@@ -109,12 +115,10 @@ async def reset_clan_xp():
             log_file.write(f"Error resetting clan XP tables: {e}\n")
 
 # Periodic task that runs every 1 week (604800 seconds)
-@tasks.loop(seconds=604800)  # Run every 604,800 seconds (1 week)
+@tasks.loop(seconds=10)  # Run every 604,800 seconds (1 week)
 async def reset_weekly():
     # Send the leaderboard before resetting
     await send_clan_comparison_leaderboard()
-
-    # Reset the clan XP tables after sending the leaderboard
     await reset_clan_xp()
        
 # Function to count custom emojis in a message
