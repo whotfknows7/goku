@@ -18,6 +18,7 @@ RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
 LAST_RESET_TIME_FILE = "last_reset_time.txt"  # File to track last reset time
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
+reset_task_running = False  # Global variable to track task status
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -48,20 +49,18 @@ cached_image_path = "leaderboard.png"
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 
+# Event when bot is ready
 @bot.event
 async def on_ready():
+    global reset_task_running
+
     try:
         logger.info(f"Bot logged in as {bot.user.name}")
 
         # Ensure the reset task is scheduled properly
-        task_running = False
-        for task in asyncio.all_tasks():
-            if task.__name__ == 'reset_task':  # Check if task name matches
-                task_running = True
-                break
-        
-        if not task_running:
-            bot.loop.create_task(reset_task(), name='reset_task')  # Start reset_task in the background
+        if not reset_task_running:
+            reset_task_running = True
+            bot.loop.create_task(reset_task())  # Start reset_task in the background
 
         # Start the weekly reset task (ensure it's running)
         if not reset_weekly.is_running():
@@ -82,6 +81,15 @@ async def on_resumed():
 async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred: {event}, {args}, {kwargs}")
 
+# Function to check contents of the file
+def check_file_contents():
+    if os.path.exists(LAST_RESET_TIME_FILE):
+        with open(LAST_RESET_TIME_FILE, "r") as file:
+            content = file.read()
+            logger.info(f"Contents of the reset time file: {content}")
+    else:
+        logger.info(f"{LAST_RESET_TIME_FILE} does not exist.")
+
 # Function to read the last reset time from the file
 def read_last_reset_time():
     try:
@@ -91,16 +99,35 @@ def read_last_reset_time():
             return datetime.now()  # Return the current time as the last reset time
 
         with open(LAST_RESET_TIME_FILE, "r") as file:
-            return datetime.fromisoformat(file.read().strip())  # Read last reset time
+            # Read and strip the content to handle any unwanted extra spaces or empty lines
+            content = file.read().strip()
+
+            if not content:  # If the file is empty
+                logger.info("The reset file is empty, writing current time.")
+                write_last_reset_time()  # Write current time as last reset time
+                return datetime.now()  # Return the current time
+
+            try:
+                # Try to parse the content as a datetime
+                return datetime.fromisoformat(content)  # Read last reset time
+            except ValueError as e:
+                logger.error(f"Invalid datetime format in file: {e}")
+                write_last_reset_time()  # Write current time as last reset time
+                return datetime.now()  # Return current time
+
     except Exception as e:
+        # Log the error and return current time as fallback
         logger.error(f"Error reading last reset time: {e}")
-        return None  # Return None if there’s an error
+        write_last_reset_time()  # Write current time as last reset time in case of error
+        return datetime.now()  # Return current time
 
 # Function to write the last reset time to the file
 def write_last_reset_time():
     try:
         with open(LAST_RESET_TIME_FILE, "w") as file:
-            file.write(datetime.now().isoformat())  # Store current time as last reset time
+            current_time = datetime.now().isoformat()  # Get current time as ISO 8601 format
+            file.write(current_time)  # Store current time as last reset time
+            logger.info(f"Last reset time written to file: {current_time}")
     except Exception as e:
         logger.error(f"Error writing last reset time: {e}")
 
@@ -126,24 +153,17 @@ async def reset_database():
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
             
-import logging
-from datetime import timedelta
-
-# Assuming RESET_INTERVAL is defined somewhere, e.g.:
-RESET_INTERVAL = timedelta(weeks=1)  # One week interval
-
-# Initialize logger (if not already done)
-logger = logging.getLogger(__name__)
-
-# Reset task that runs periodically
+# Update reset_task to set the global variable when the task is done
 async def reset_task():
-    while True:
-        try:
+    global reset_task_running
+    try:
+        while True:
             remaining_time = time_remaining_until_reset()
-            logger.info(f"Time remaining until next reset: {remaining_time}")
+            print(f"Time remaining until next reset: {remaining_time}")
 
             # If time remaining is greater than 0, wait for it
             if remaining_time > timedelta(0):
+                # Wait for the remaining time
                 await asyncio.sleep(remaining_time.total_seconds())
 
             # Once the wait time is over, perform the reset
@@ -155,11 +175,8 @@ async def reset_task():
             # Wait for the next interval (1 week) before running the reset task again
             await asyncio.sleep(RESET_INTERVAL.total_seconds())
 
-        except Exception as e:
-            logger.error(f"Error in reset task: {e}")
-            # Wait before retrying in case of an error
-            await asyncio.sleep(60)  # Sleep for a minute before retrying if something goes wrong
-
+    finally:
+        reset_task_running = False  # Reset the flag when the task completes
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
     # Fetch top 10 users with their XP
