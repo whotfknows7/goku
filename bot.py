@@ -179,6 +179,7 @@ async def reset_task():
 
     finally:
         reset_task_running = False  # Reset the flag when the task completes
+        
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
     # Fetch top 10 users with their XP
