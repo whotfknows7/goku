@@ -98,7 +98,7 @@ async def reset_and_save_top_users():
 # Example of running the reset task every 24 hours
 async def reset_task():
     while True:
-        await asyncio.sleep(86400)  # Sleep for 24 hours (86400 seconds)
+        await asyncio.sleep(10)  # Sleep for 24 hours (86400 seconds)
         await reset_and_save_top_users()
 
 # Database reset function for both clans
@@ -115,7 +115,7 @@ async def reset_clan_xp():
             log_file.write(f"Error resetting clan XP tables: {e}\n")
 
 # Periodic task that runs every 1 week (604800 seconds)
-@tasks.loop(seconds=604800)  # Run every 604,800 seconds (1 week)
+@tasks.loop(seconds=10)  # Run every 604,800 seconds (1 week)
 async def reset_weekly():
     # Send the leaderboard before resetting
     await send_clan_comparison_leaderboard()
