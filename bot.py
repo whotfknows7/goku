@@ -53,7 +53,18 @@ cached_image_path = "leaderboard.png"
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 
-# Event when bot is ready
+@tasks.loop(minutes=15)
+async def reconnect_bot():
+    try:
+        logger.info("Disconnecting bot for scheduled reconnect...")
+        await bot.close()  # Disconnect the bot
+        
+        # Restart the bot process
+        logger.info("Restarting bot process...")
+        os.execv(sys.executable, ['python'] + sys.argv)  # Restart the current script
+    except Exception as e:
+        logger.error(f"Error during scheduled reconnect: {e}")
+
 @bot.event
 async def on_ready():
     global reset_task_running
@@ -73,12 +84,16 @@ async def on_ready():
         # Ensure your leaderboard update function is also running
         update_leaderboard.start()  # Ensure leaderboard update function is running
 
+        # Start the periodic reconnect task
+        if not reconnect_bot.is_running():
+            reconnect_bot.start()
+
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
+        
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Cleaning up tasks.")
-    await bot.close()
 
 @bot.event
 async def on_resumed():
