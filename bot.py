@@ -53,8 +53,6 @@ cached_image_path = "leaderboard.png"
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 
-from discord.ext import tasks
-
 @tasks.loop(minutes=15)  # Loop every 15 minutes
 async def reconnect_bot():
     try:
@@ -95,10 +93,6 @@ async def on_ready():
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Cleaning up tasks.")
-
-@bot.event
-async def on_resumed():
-    logger.info("Bot successfully reconnected and resumed.")
 
 @bot.event
 async def on_error(event, *args, **kwargs):
@@ -846,7 +840,7 @@ async def close_bot():
 
 if __name__ == "__main__":
     try:
-        bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)
+        bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GtV2My.Z76kCOt4VKCzCc3jvmIzA_mfhiSrtCo-geUZos')
     except KeyboardInterrupt:
         asyncio.run(close_bot())
       
@@ -874,4 +868,4 @@ async def announce_role_update(member, role_name):
     if role_info:
         message = role_info["message"].format(member=member)
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
-      await channel.send(message)
+        await channel.send(message)
