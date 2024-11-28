@@ -14,6 +14,7 @@ from typing import List, Dict
 import sqlite3
 import signal
 import sys
+import traceback
 
 # Constants
 RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
@@ -53,16 +54,46 @@ cached_image_path = "leaderboard.png"
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 
-@tasks.loop(minutes=15)  # Loop every 15 minutes
+async def graceful_shutdown():
+    logger.info("Shutting down bot gracefully...")
+    try:
+        # Stop tasks
+        reset_weekly.stop()
+        reset_task_running = False
+
+        # Close database connection
+        conn.close()
+        logger.info("Database connection closed.")
+
+        # Cancel all running tasks
+        tasks = asyncio.all_tasks()
+        for task in tasks:
+            if task is not asyncio.current_task():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    logger.info(f"Cancelled task: {task}")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
+@tasks.loop(minutes=15)
 async def reconnect_bot():
     try:
+        # Only for the first loop iteration
+        if reconnect_bot.current_loop == 0:
+            logger.info("Initial delay for reconnect_bot.")
+            await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+
         logger.info("Disconnecting bot for scheduled reconnect...")
-        await bot.close()  # Disconnect the bot
-        await asyncio.sleep(5)  # Wait for a short period before reconnecting (5 seconds)
-        logger.info("Reconnecting bot...")
-        await bot.start("MTMwMzQyNjkzMzU4MDc2MzIzNg.GtV2My.Z76kCOt4VKCzCc3jvmIzA_mfhiSrtCo-geUZos")  # Replace "YOUR_TOKEN" with your actual bot token
+        await bot.close()
+        await graceful_shutdown()
+
+        logger.info(f"Restarting bot with: {sys.executable} {sys.argv}")
+        await asyncio.sleep(10)
+        os.execv(sys.executable, ['python3'] + sys.argv)
     except Exception as e:
-        logger.error(f"Error during scheduled reconnect: {e}")
+        logger.error("Failed to restart bot process:", exc_info=True)
 
 @bot.event
 async def on_ready():
@@ -80,13 +111,10 @@ async def on_ready():
         if not reset_weekly.is_running():
             reset_weekly.start()  # Start the looped weekly task
 
-        # Ensure your leaderboard update function is also running
-        update_leaderboard.start()  # Ensure leaderboard update function is running
-
-        # Start the periodic reconnect task
+        # Ensure the reconnect bot task is running
         if not reconnect_bot.is_running():
+            logger.info("Starting reconnect_bot task.")
             reconnect_bot.start()
-
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
 
