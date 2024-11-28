@@ -81,24 +81,18 @@ async def graceful_shutdown():
 async def reconnect_bot():
     try:
         logger.info("Scheduled reconnect task started.")
-
+        
         # Wait for 15 minutes before disconnecting
         logger.info("Bot will stay active for 15 minutes before disconnecting.")
-        try:
-            await asyncio.sleep(15 * 60)  # Delay for 15 minutes
-        except asyncio.CancelledError:
-            logger.info("Reconnect bot task was canceled (Ctrl+C or shutdown).")
-            return  # Exit gracefully after being canceled
-
+        await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+        
         logger.info("Disconnecting bot for scheduled reconnect...")
         await bot.close()  # Disconnect the bot
-
         await graceful_shutdown()  # Clean up tasks and resources
-
+        
         # Restart the process
         logger.info(f"Restarting bot with: {sys.executable} {sys.argv}")
         os.execv(sys.executable, ['python3'] + sys.argv)  # Restart the script
-
     except Exception as e:
         logger.error("Failed to restart bot process:", exc_info=True)
         with open("restart_error.log", "a") as log_file:
@@ -863,38 +857,28 @@ async def reset_weekly():
 
 def shutdown_handler():
     logger.info("Shutting down bot... Cancelling tasks.")
-
-    # Cancel all tasks
     for task in asyncio.all_tasks():
-        if task is not asyncio.current_task():
-            logger.info(f"Cancelling task: {task}")
-            task.cancel()
+        logger.info(f"Cancelling task: {task}")
+        task.cancel()
 
-    # Ensure the cleanup is done gracefully
-    asyncio.create_task(close_bot())  # Close bot and release resources cleanly.
-
-
+loop = asyncio.get_event_loop()
+loop.add_signal_handler(signal.SIGINT, shutdown_handler)  # Handle Ctrl+C
+        
 async def close_bot():
     logger.info("Closing bot and cleaning up resources.")
-
     try:
-        await bot.close()  # Ensure the bot is closed properly
-        conn.close()  # Ensure the database connection is closed
+        await bot.close()
+        conn.close()
         logger.info("Database connection closed.")
     except Exception as e:
         logger.error(f"Error during bot cleanup: {e}")
-    finally:
-        # Ensure the event loop is closed gracefully after cleanup
-        logger.info("Closing event loop.")
-        loop.stop()  # Ensure event loop stops after everything is cleaned up
 
 if __name__ == "__main__":
     try:
         bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GtV2My.Z76kCOt4VKCzCc3jvmIzA_mfhiSrtCo-geUZos')
     except KeyboardInterrupt:
-        logger.info("KeyboardInterrupt received, shutting down bot.")
-        asyncio.run(close_bot())  # Ensure proper cleanup and shutdown
-    
+        asyncio.run(close_bot())
+      
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
