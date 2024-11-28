@@ -12,6 +12,8 @@ import re
 import emoji
 from typing import List, Dict
 import sqlite3
+import signal
+import sys
 
 # Constants
 RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
@@ -811,6 +813,8 @@ async def reset_weekly():
 
     except Exception as e:
         logger.error(f"Error in reset_weekly task: {e}")
+        
+       
 
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
