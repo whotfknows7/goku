@@ -80,10 +80,8 @@ async def graceful_shutdown():
 @tasks.loop(minutes=15)
 async def reconnect_bot():
     try:
-        logger.info("Scheduled reconnect task started.")
-        
         # Wait for 15 minutes before disconnecting
-        logger.info("Bot will stay active for 15 minutes before disconnecting.")
+        logger.info("------------------------------------------------------------------------------------------------------------------------------")
         await asyncio.sleep(15 * 60)  # Delay for 15 minutes
         
         logger.info("Disconnecting bot for scheduled reconnect...")
@@ -103,7 +101,7 @@ async def on_ready():
     global reset_task_running
 
     try:
-        logger.info(f"Bot logged in as {bot.user.name}")
+        logger.info(f"{bot.user.name} in service!")
 
         # Ensure the reset task is scheduled properly
         if not reset_task_running:
@@ -116,12 +114,9 @@ async def on_ready():
 
         # Ensure the reconnect bot task is running
         if not reconnect_bot.is_running():
-            logger.info("Starting reconnect_bot task.")
+            logger.info("uh huh")
             reconnect_bot.start()
-            
-        # Ensure your leaderboard update function is also running
-        update_leaderboard.start()  # Ensure leaderboard update function is running
-        
+                    
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
 
