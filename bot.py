@@ -16,8 +16,8 @@ import sqlite3
 # Constants
 RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
 D_RESET_INTERVAL = timedelta(days=1)
-D_LAST_RESET_TIME_FILE = "daily_last_reset_time.txt"
 LAST_RESET_TIME_FILE = "last_reset_time.txt"  # File to track last reset time
+D_LAST_RESET_TIME_FILE = "daily_last_reset_time.txt"
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
 reset_task_running = False  # Global variable to track task status
@@ -85,6 +85,14 @@ async def on_resumed():
 async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred: {event}, {args}, {kwargs}")
 
+def d_check_file_contents():
+    if os.path.exists(D_LAST_RESET_TIME_FILE):
+        with open(D_LAST_RESET_TIME_FILE, "r") as file:
+            content = file.read()
+            logger.info(f"Contents of the reset time file: {content}")
+    else:
+        logger.info(f"{D_LAST_RESET_TIME_FILE} does not exist.")
+
 # Function to check contents of the file
 def check_file_contents():
     if os.path.exists(LAST_RESET_TIME_FILE):
@@ -125,6 +133,37 @@ def read_last_reset_time():
         write_last_reset_time()  # Write current time as last reset time in case of error
         return datetime.now()  # Return current time
 
+# Function to read the last reset time from the file
+def d_read_last_reset_time():
+    try:
+        if not os.path.exists(D_LAST_RESET_TIME_FILE):
+            # If the file doesn't exist, initialize it with the current time
+            d_write_last_reset_time()
+            return datetime.now()  # Return the current time as the last reset time
+
+        with open(D_LAST_RESET_TIME_FILE, "r") as file:
+            # Read and strip the content to handle any unwanted extra spaces or empty lines
+            content = file.read().strip()
+
+            if not content:  # If the file is empty
+                logger.info("The reset file is empty, writing current time.")
+                d_write_last_reset_time()  # Write current time as last reset time
+                return datetime.now()  # Return the current time
+
+            try:
+                # Try to parse the content as a datetime
+                return datetime.fromisoformat(content)  # Read last reset time
+            except ValueError as e:
+                logger.error(f"Invalid datetime format in file: {e}")
+                d_write_last_reset_time()  # Write current time as last reset time
+                return datetime.now()  # Return current time
+
+    except Exception as e:
+        # Log the error and return current time as fallback
+        logger.error(f"Error reading last reset time: {e}")
+        d_write_last_reset_time()  # Write current time as last reset time in case of error
+        return datetime.now()  # Return current time
+      
 # Function to write the last reset time to the file
 def write_last_reset_time():
     try:
@@ -135,14 +174,24 @@ def write_last_reset_time():
     except Exception as e:
         logger.error(f"Error writing last reset time: {e}")
 
+# Function to write the last reset time to the file
+def d_write_last_reset_time():
+    try:
+        with open(D_LAST_RESET_TIME_FILE, "w") as file:
+            current_time = datetime.now().isoformat()  # Get current time as ISO 8601 format
+            file.write(current_time)  # Store current time as last reset time
+            logger.info(f"Last reset time written to file: {current_time}")
+    except Exception as e:
+        logger.error(f"Error writing last reset time: {e}")
+
 # Function to calculate the remaining time before the next reset
-def time_remaining_until_reset():
-    last_reset_time = read_last_reset_time()
-    if last_reset_time is None:
-        return RESET_INTERVAL  # No last reset time, return 1 week interval
-    next_reset_time = last_reset_time + RESET_INTERVAL
-    remaining_time = next_reset_time - datetime.now()
-    return remaining_time if remaining_time > timedelta(0) else timedelta(0)  # Return remaining time or 0 if reset is overdue
+def d_time_remaining_until_reset():
+    d_last_reset_time = d_read_last_reset_time()
+    if d_last_reset_time is None:
+        return D_RESET_INTERVAL  # No last reset time, return 1 week interval
+    d_next_reset_time = d_last_reset_time + D_RESET_INTERVAL
+    d_remaining_time = d_next_reset_time - datetime.now()
+    return d_remaining_time if d_remaining_time > timedelta(0) else timedelta(0)  # Return remaining time or 0 if reset is overdue
 
 # Function to reset the database (clear all XP data)
 async def reset_database():
@@ -162,25 +211,25 @@ async def reset_task():
     global reset_task_running
     try:
         while True:
-            remaining_time = time_remaining_until_reset()
-            print(f"Time remaining until next reset: {remaining_time}")
+            d_remaining_time = d_time_remaining_until_reset()
+            print(f"Time remaining until next reset: {d_remaining_time}")
 
             # If time remaining is greater than 0, wait for it
-            if remaining_time > timedelta(0):
+            if d_remaining_time > timedelta(0):
                 # Wait for the remaining time
-                await asyncio.sleep(remaining_time.total_seconds())
+                await asyncio.sleep(d_remaining_time.total_seconds())
 
             # Once the wait time is over, perform the reset
             await reset_and_save_top_users()  # Reset XP data and save top users
 
             # Update the last reset time
-            write_last_reset_time()
+            d_write_last_reset_time()
 
             # Wait for the next interval (1 week) before running the reset task again
-            await asyncio.sleep(RESET_INTERVAL.total_seconds())
+            await asyncio.sleep(D_RESET_INTERVAL.total_seconds())
 
     finally:
-        reset_task_running = False  # Reset the flag when the task completes
+        d_reset_task_running = False  # Reset the flag when the task completes
         
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
