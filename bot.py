@@ -174,15 +174,16 @@ def write_last_reset_time():
     except Exception as e:
         logger.error(f"Error writing last reset time: {e}")
 
-# Function to write the last reset time to the file
 def d_write_last_reset_time():
     try:
         with open(D_LAST_RESET_TIME_FILE, "w") as file:
-            current_time = datetime.now().isoformat()  # Get current time as ISO 8601 format
-            file.write(current_time)  # Store current time as last reset time
-            logger.info(f"Last reset time written to file: {current_time}")
+            current_time = datetime.now().isoformat()
+            file.write(current_time)
+            logger.info(f"Successfully wrote to {D_LAST_RESET_TIME_FILE}: {current_time}")
     except Exception as e:
-        logger.error(f"Error writing last reset time: {e}")
+        logger.error(f"Failed to write to {D_LAST_RESET_TIME_FILE}: {e}")
+        raise  # Re-raise to highlight the error
+
 
 # Function to calculate the remaining time before the next reset
 def d_time_remaining_until_reset():
@@ -215,31 +216,25 @@ async def reset_database():
         with open("error_log.txt", "a") as log_file:
             log_file.write(f"Error resetting the database: {e}\n")
             
-# Update reset_task to set the global variable when the task is done
 async def reset_task():
     global reset_task_running
     try:
         while True:
             d_remaining_time = d_time_remaining_until_reset()
-            print(f"Time remaining until next reset: {d_remaining_time}")
+            logger.info(f"Daily time remaining: {d_remaining_time}")
 
-            # If time remaining is greater than 0, wait for it
-            if d_remaining_time > timedelta(0):
-                # Wait for the remaining time
+            if d_remaining_time.total_seconds() > 0:
                 await asyncio.sleep(d_remaining_time.total_seconds())
 
-            # Once the wait time is over, perform the reset
-            await reset_and_save_top_users()  # Reset XP data and save top users
-
-            # Update the last reset time
+            # Perform daily reset and log success
+            await reset_and_save_top_users()
             d_write_last_reset_time()
-
-            # Wait for the next interval (1 week) before running the reset task again
-            await asyncio.sleep(D_RESET_INTERVAL.total_seconds())
-
+            logger.info("Daily reset completed.")
+    except Exception as e:
+        logger.error(f"Error in reset_task: {e}")
     finally:
-        d_reset_task_running = False  # Reset the flag when the task completes
-        
+        reset_task_running = False
+    
 # Function to reset the database and perform the save operation
 async def reset_and_save_top_users():
     # Fetch top 10 users with their XP
