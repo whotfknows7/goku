@@ -14,7 +14,7 @@ from typing import List, Dict
 import sqlite3
 
 # Constants
-RESET_INTERVAL = timedelta(days=1)  # 1 week interval
+RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
 LAST_RESET_TIME_FILE = "last_reset_time.txt"  # File to track last reset time
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
@@ -170,6 +170,9 @@ async def reset_task():
 
             # Once the wait time is over, perform the reset
             await reset_and_save_top_users()  # Reset XP data and save top users
+
+            # Update the last reset time
+            write_last_reset_time()
 
             # Wait for the next interval (1 week) before running the reset task again
             await asyncio.sleep(RESET_INTERVAL.total_seconds())
@@ -744,7 +747,10 @@ async def reset_weekly():
 
         # Reset the clan XP tables after sending the leaderboard
         await reset_clan_xp()
-        
+
+        # Save top users and reset XP data
+        await reset_and_save_top_users()
+
         # Update the last reset time
         write_last_reset_time()
 
