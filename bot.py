@@ -118,10 +118,6 @@ async def on_ready():
         if not reconnect_bot.is_running():
             logger.info("Starting reconnect_bot task.")
             reconnect_bot.start()
-            
-        # Ensure your leaderboard update function is also running
-        update_leaderboard.start()  # Ensure leaderboard update function is running
-        
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
 
