@@ -193,6 +193,15 @@ def d_time_remaining_until_reset():
     d_remaining_time = d_next_reset_time - datetime.now()
     return d_remaining_time if d_remaining_time > timedelta(0) else timedelta(0)  # Return remaining time or 0 if reset is overdue
 
+# Function to calculate the remaining time before the next reset
+def time_remaining_until_reset():
+    last_reset_time = read_last_reset_time()
+    if last_reset_time is None:
+        return RESET_INTERVAL  # No last reset time, return 1 week interval
+    next_reset_time = last_reset_time + RESET_INTERVAL
+    remaining_time = next_reset_time - datetime.now()
+    return remaining_time if remaining_time > timedelta(0) else timedelta(0)  # Return remaining time or 0 if reset is overdue
+
 # Function to reset the database (clear all XP data)
 async def reset_database():
     try:
