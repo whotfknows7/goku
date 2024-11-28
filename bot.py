@@ -53,15 +53,16 @@ cached_image_path = "leaderboard.png"
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
 
-@tasks.loop(minutes=15)
+from discord.ext import tasks
+
+@tasks.loop(minutes=15)  # Loop every 15 minutes
 async def reconnect_bot():
     try:
         logger.info("Disconnecting bot for scheduled reconnect...")
         await bot.close()  # Disconnect the bot
-        
-        # Restart the bot process
-        logger.info("Restarting bot process...")
-        os.execv(sys.executable, ['python'] + sys.argv)  # Restart the current script
+        await asyncio.sleep(5)  # Wait for a short period before reconnecting (5 seconds)
+        logger.info("Reconnecting bot...")
+        await bot.start("YOUR_TOKEN")  # Replace "YOUR_TOKEN" with your actual bot token
     except Exception as e:
         logger.error(f"Error during scheduled reconnect: {e}")
 
@@ -90,7 +91,7 @@ async def on_ready():
 
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
-        
+
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Cleaning up tasks.")
