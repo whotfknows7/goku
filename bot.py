@@ -80,20 +80,23 @@ async def graceful_shutdown():
 @tasks.loop(minutes=15)
 async def reconnect_bot():
     try:
-        # Only for the first loop iteration
-        if reconnect_bot.current_loop == 0:
-            logger.info("Initial delay for reconnect_bot.")
-            await asyncio.sleep(15 * 60)  # Delay for 15 minutes
-
+        logger.info("Scheduled reconnect task started.")
+        
+        # Wait for 15 minutes before disconnecting
+        logger.info("Bot will stay active for 15 minutes before disconnecting.")
+        await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+        
         logger.info("Disconnecting bot for scheduled reconnect...")
-        await bot.close()
-        await graceful_shutdown()
-
+        await bot.close()  # Disconnect the bot
+        await graceful_shutdown()  # Clean up tasks and resources
+        
+        # Restart the process
         logger.info(f"Restarting bot with: {sys.executable} {sys.argv}")
-        await asyncio.sleep(10)
-        os.execv(sys.executable, ['python3'] + sys.argv)
+        os.execv(sys.executable, ['python3'] + sys.argv)  # Restart the script
     except Exception as e:
         logger.error("Failed to restart bot process:", exc_info=True)
+        with open("restart_error.log", "a") as log_file:
+            log_file.write(f"{datetime.now()}: {traceback.format_exc()}\n")
 
 @bot.event
 async def on_ready():
