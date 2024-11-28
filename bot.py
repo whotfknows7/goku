@@ -61,10 +61,6 @@ async def on_ready():
     try:
         logger.info(f"Bot logged in as {bot.user.name}")
 
-        # Start the reconnect task if it's not already running
-        if not reconnect_bot.is_running():
-            reconnect_bot.start()
-
         # Ensure the reset task is scheduled properly
         if not reset_task_running:
             reset_task_running = True
@@ -75,40 +71,15 @@ async def on_ready():
             reset_weekly.start()  # Start the looped weekly task
 
         # Ensure your leaderboard update function is also running
-        if not update_leaderboard.is_running():
-            update_leaderboard.start()  # Start leaderboard update task
+        update_leaderboard.start()  # Ensure leaderboard update function is running
 
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
-
-@tasks.loop(minutes=15)  # Run every 15 minutes
-async def reconnect_bot():
-    try:
-        logger.info("Disconnecting the bot...")
-        await bot.close()  # Disconnect the bot
-
-        logger.info("Reconnecting the bot...")
-        await bot.start(TOKEN)  # Reconnect the bot
-    except Exception as e:
-        logger.error(f"Error during bot reconnection: {e}")
-
-
-@reconnect_bot.before_loop
-async def before_reconnect_bot():
-    await bot.wait_until_ready()  # Ensure the bot is ready before starting the loop
-    logger.info("Reconnection loop is starting...")
-
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Cleaning up tasks.")
+    await bot.close()
 
-    # Stop the reconnect task loop to avoid redundant reconnection attempts
-    if reconnect_bot.is_running():
-        reconnect_bot.cancel()
-
-    # Perform additional cleanup if necessary
-    logger.info("Bot disconnected successfully.")
-    
 @bot.event
 async def on_resumed():
     logger.info("Bot successfully reconnected and resumed.")
