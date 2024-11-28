@@ -15,6 +15,8 @@ import sqlite3
 
 # Constants
 RESET_INTERVAL = timedelta(weeks=1)  # 1 week interval
+D_RESET_INTERVAL = timedelta(days=1)
+D_LAST_RESET_TIME_FILE = "daily_last_reset_time.txt"
 LAST_RESET_TIME_FILE = "last_reset_time.txt"  # File to track last reset time
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
