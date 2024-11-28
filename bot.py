@@ -60,7 +60,8 @@ async def on_ready():
 
     try:
         logger.info(f"Bot logged in as {bot.user.name}")
-
+        if not reconnect_bot.is_running():
+        reconnect_bot.start()  # Start the reconnect task
         # Ensure the reset task is scheduled properly
         if not reset_task_running:
             reset_task_running = True
@@ -75,11 +76,29 @@ async def on_ready():
 
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
+
+@tasks.loop(minutes=15)  # Run every 15 minutes
+async def reconnect_bot():
+    try:
+        logger.info("Disconnecting the bot...")
+        await bot.close()  # Disconnect the bot
+        logger.info("Reconnecting the bot...")
+        await bot.start(TOKEN)  # Reconnect the bot
+    except Exception as e:
+        logger.error(f"Error during bot reconnection: {e}")
+
+@reconnect_bot.before_loop
+async def before_reconnect_bot():
+    await bot.wait_until_ready()  # Ensure the bot is ready before starting the loop
+    logger.info("Reconnection loop is starting...")
+
 @bot.event
 async def on_disconnect():
     logger.warning("Bot got disconnected. Cleaning up tasks.")
+    logger.info("Bot disconnected.")
+    reconnect_bot.cancel()  # Stop the loop when the bot is manually stopped
     await bot.close()
-
+    
 @bot.event
 async def on_resumed():
     logger.info("Bot successfully reconnected and resumed.")
