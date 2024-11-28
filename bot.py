@@ -77,7 +77,8 @@ async def on_ready():
         logger.error(f"Error in on_ready: {e}")
 @bot.event
 async def on_disconnect():
-    logger.warning("Bot got disconnected. Attempting to reconnect...")
+    logger.warning("Bot got disconnected. Cleaning up tasks.")
+    await bot.close()
 
 @bot.event
 async def on_resumed():
@@ -232,6 +233,9 @@ async def reset_task():
             await reset_and_save_top_users()
             d_write_last_reset_time()
             logger.info("Daily reset completed.")
+    except asyncio.CancelledError:
+        logger.info("reset_task was cancelled.")
+        raise  # Allow the cancellation to propagate
     except Exception as e:
         logger.error(f"Error in reset_task: {e}")
     finally:
@@ -787,35 +791,49 @@ async def send_clan_comparison_leaderboard():
     channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)  # Change to the desired channel ID
     await channel.send(comparison_message)
 
-# Periodic task that runs every 1 week (604800 seconds)
-@tasks.loop(seconds=604800)  # Run every 604,800 seconds (1 week)
+@tasks.loop(seconds=604800)
 async def reset_weekly():
     try:
-        # Calculate time remaining until the next reset
         remaining_time = time_remaining_until_reset()
-        print(f"Time remaining until next reset: {remaining_time}")
+        logger.info(f"Time remaining until next reset: {remaining_time}")
 
         if remaining_time > timedelta(0):
-            # Wait until the time remaining for reset is over
             await asyncio.sleep(remaining_time.total_seconds())
 
-        # Send the leaderboard before resetting
         await send_clan_comparison_leaderboard()
-
-        # Reset the clan XP tables after sending the leaderboard
         await reset_clan_xp()
-
-        # Save top users and reset XP data
         await reset_and_save_top_users()
-
-        # Update the last reset time
         write_last_reset_time()
-
+    except asyncio.CancelledError:
+        logger.info("reset_weekly task was cancelled.")
+        raise
     except Exception as e:
         logger.error(f"Error in reset_weekly task: {e}")
-        
-       
 
+def shutdown_handler():
+    logger.info("Shutting down bot... Cancelling tasks.")
+    for task in asyncio.all_tasks():
+        logger.info(f"Cancelling task: {task}")
+        task.cancel()
+
+loop = asyncio.get_event_loop()
+loop.add_signal_handler(signal.SIGINT, shutdown_handler)  # Handle Ctrl+C
+        
+async def close_bot():
+    logger.info("Closing bot and cleaning up resources.")
+    try:
+        await bot.close()
+        conn.close()
+        logger.info("Database connection closed.")
+    except Exception as e:
+        logger.error(f"Error during bot cleanup: {e}")
+
+if __name__ == "__main__":
+    try:
+        bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)
+    except KeyboardInterrupt:
+        asyncio.run(close_bot())
+      
 ROLE_NAMES = {
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
@@ -843,4 +861,3 @@ async def announce_role_update(member, role_name):
         await channel.send(message)
 
 # Run bot with token
-bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GpSZcY.4mvu2PTpCOm7EuCaUecADGgssPLpxMBrlHjzbI', reconnect=True)  # Replace with your bot token
