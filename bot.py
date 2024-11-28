@@ -62,7 +62,7 @@ async def reconnect_bot():
         await bot.close()  # Disconnect the bot
         await asyncio.sleep(5)  # Wait for a short period before reconnecting (5 seconds)
         logger.info("Reconnecting bot...")
-        await bot.start("YOUR_TOKEN")  # Replace "YOUR_TOKEN" with your actual bot token
+        await bot.start("MTMwMzQyNjkzMzU4MDc2MzIzNg.GtV2My.Z76kCOt4VKCzCc3jvmIzA_mfhiSrtCo-geUZos")  # Replace "YOUR_TOKEN" with your actual bot token
     except Exception as e:
         logger.error(f"Error during scheduled reconnect: {e}")
 
@@ -874,6 +874,4 @@ async def announce_role_update(member, role_name):
     if role_info:
         message = role_info["message"].format(member=member)
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
-        await channel.send(message)
-
-# Run bot with token
+      await channel.send(message)
