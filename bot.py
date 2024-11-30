@@ -140,7 +140,9 @@ async def on_ready():
             logger.info("Starting reconnect_bot task.")
             reconnect_bot.start()
               
-        if update_leaderboard.start()
+        # Call the leaderboard update function
+        update_leaderboard.start()
+        
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
 
@@ -345,15 +347,8 @@ def is_emoji(char):
 # Bot event for incoming messages
 @bot.event
 async def on_message(message):
-
     if message.author.bot:
         return
-
-    # Check for words longer than 12 characters
-    words = message.content.split()
-    for word in words:
-        if len(word) > 12:
-            return  # Ignore the message if it contains a word longer than 12 characters
 
     user_id = message.author.id
 
