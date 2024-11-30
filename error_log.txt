@@ -1,2 +1,0 @@
-2024-11-28 20:42:19 - Error updating XP for 1170477664440692799: attempt to write a readonly database
-2024-11-28 20:42:28 - Error updating XP for 1170477664440692799: attempt to write a readonly database
