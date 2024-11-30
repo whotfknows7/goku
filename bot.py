@@ -789,7 +789,10 @@ async def announce_role_update(member, role_name):
                 await channel.send("Image not found for this role.")
         else:
             print(f"Channel with ID {ROLE_LOG_CHANNEL_ID} not found.")
-        
+       
+from discord import app_commands
+
+ 
 @bot.command(name='hi')
 async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
