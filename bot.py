@@ -25,18 +25,18 @@ conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
 reset_task_running = False  # Global variable to track task status
 ROLE_IMAGES_FOLDER = "./role_images"  # Path to your folder containing images
-DISCORD_TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.Gr_1Eo.JJMfhGkzZYZAg4_kWizn55u1jlERs0rIlVjMAc'
+
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Channel IDs
-ROLE_LOG_CHANNEL_ID = 1251143629943345204
-LEADERBOARD_CHANNEL_ID = 1303672077068537916
-GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
-CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
-CLAN_ROLE_2_ID = 1247225208700665856
-
+ROLE_LOG_CHANNEL_ID = 
+LEADERBOARD_CHANNEL_ID = 
+GUILD_ID =   # Replace with your actual guild ID
+CLAN_ROLE_1_ID =   # Replace with your actual Clan Role 1 ID
+CLAN_ROLE_2_ID =
+DISCORD_TOKEN = 
 # Define intents
 intents = discord.Intents.default()
 intents.members = True
