@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 import requests
 
@@ -8,7 +6,7 @@ ROLE_IMAGES_FOLDER = "./level_roles/"
 
 # List of image URLs (paste your image URLs here)
 image_urls = {
-    "🧔Homo Sapien": "https://media.discordapp.net/attachments/1301183910838796460/1312489208740446310/Homo_sapien_4.png?ex=674cae54&is=674b5cd4&hm=55e5b70b4a33b93dedad313a35c32a4dd01c2b9023587d9ad43e1f8e15c129ab&=&format=webp&quality=lossless&width=1440&height=430",
+    "🧔Homo Sapien": "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/Homo%20sapien%20(4).png?v=1732993113715",
     "🏆Homie": "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/Homo%20sapien%20(5).png?v=1732993118399",
     "🥉VETERAN": "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/Homo%20sapien%20(3).png?v=1732993017671",
     "🥈ELITE": "https://cdn.glitch.global/04f6dfef-4255-4a66-b865-c95597b8df08/Homo%20sapien%20(6).png?v=1732993125632",
