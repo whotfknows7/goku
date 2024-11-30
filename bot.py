@@ -25,7 +25,7 @@ conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
 reset_task_running = False  # Global variable to track task status
 ROLE_IMAGES_FOLDER = "./role_images"  # Path to your folder containing images
-
+DISCORD_TOKEN = 'MTMwMzQyNjkzMzU4MDc2MzIzNg.Gr_1Eo.JJMfhGkzZYZAg4_kWizn55u1jlERs0rIlVjMAc'
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -790,7 +790,6 @@ async def announce_role_update(member, role_name):
         else:
             print(f"Channel with ID {ROLE_LOG_CHANNEL_ID} not found.")
        
-from discord import app_commands
 
 @bot.command(name='hi')
 async def hi(ctx):
@@ -959,6 +958,6 @@ async def close_bot():
 
 if __name__ == "__main__":
     try:
-        bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GtV2My.Z76kCOt4VKCzCc3jvmIzA_mfhiSrtCo-geUZos')
+        bot.run(DISCORD_TOKEN)
     except KeyboardInterrupt:
         asyncio.run(close_bot())
