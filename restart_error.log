@@ -1,0 +1,293 @@
+Traceback (most recent call last):
+  File "bot.py", line 65, in reconnect_bot
+    await asyncio.sleep(10)  # Avoid immediate loop
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+2024-11-28 20:04:32.684743: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:09:29.054817: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(120)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:15:18.455939: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:22:10.392042: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    try:
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:22:24.955382: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:35:50.555479: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:40:10.378665: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:42:33.183521: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:43:04.655669: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:45:01.258932: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:50:37.433474: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    logger.info("Disconnecting bot for scheduled reconnect...")
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-28 20:52:54.971330: Traceback (most recent call last):
+  File "bot.py", line 85, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:14:56.871354: Traceback (most recent call last):
+  File "bot.py", line 85, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:18:22.285879: Traceback (most recent call last):
+  File "bot.py", line 85, in reconnect_bot
+    await asyncio.sleep(60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:21:43.034825: Traceback (most recent call last):
+  File "bot.py", line 85, in reconnect_bot
+    await asyncio.sleep(60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:27:02.455063: Traceback (most recent call last):
+  File "bot.py", line 85, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:28:19.666069: Traceback (most recent call last):
+  File "bot.py", line 85, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:32:50.758433: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:33:38.062352: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:34:26.082445: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:45:24.493117: Traceback (most recent call last):
+  File "bot.py", line 87, in reconnect_bot
+    await asyncio.sleep(60)  # Delay for 15 minutes
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 11:53:20.455333: Traceback (most recent call last):
+  File "bot.py", line 98, in reconnect_bot
+    with open("restart_error.log", "a") as log_file:
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:19:50.037514: Traceback (most recent call last):
+  File "bot.py", line 103, in reconnect_bot
+    except discord.HTTPException as e:
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:33:29.655202: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:41:21.441335: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:43:21.668093: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:44:12.319632: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:44:28.595105: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:45:52.458894: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:46:17.972928: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 12:57:07.291526: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 13:02:14.282293: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 13:06:04.880052: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 13:19:48.055570: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 18:58:16.412103: Traceback (most recent call last):
+  File "bot.py", line 88, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 20:08:58.360871: Traceback (most recent call last):
+  File "bot.py", line 89, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 20:12:04.051469: Traceback (most recent call last):
+  File "bot.py", line 89, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 20:20:53.371406: Traceback (most recent call last):
+  File "bot.py", line 89, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 20:22:21.259870: Traceback (most recent call last):
+  File "bot.py", line 89, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 20:23:32.861710: Traceback (most recent call last):
+  File "bot.py", line 89, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+
+2024-11-30 21:53:19.253255: Traceback (most recent call last):
+  File "bot.py", line 89, in reconnect_bot
+    await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+  File "/usr/lib/python3.7/asyncio/tasks.py", line 595, in sleep
+    return await future
+concurrent.futures._base.CancelledError
+

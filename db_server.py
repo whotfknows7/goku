@@ -2,9 +2,9 @@ import sqlite3
 import time
 import asyncio
 
-GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
-CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
-CLAN_ROLE_2_ID = 1247225208700665856
+GUILD_ID =  # Replace with your actual guild ID
+CLAN_ROLE_1_ID =  # Replace with your actual Clan Role 1 ID
+CLAN_ROLE_2_ID = 
 # Open a connection to the SQLite database
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
