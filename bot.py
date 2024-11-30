@@ -923,37 +923,51 @@ if __name__ == "__main__":
         asyncio.run(close_bot())
       
 ROLE_NAMES = {
+
     "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
+
     "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
+
     "🥉VETERAN": {"message": "🎉 Congrats {member.mention}! You've become a **VETERAN** 🥉 member!", "has_perms": False},
+
     "🥈ELITE": {"message": "🎉 Congrats {member.mention}! You've become an **ELITE** 🥈 member!", "has_perms": False},
+
     "🥇MYTHIC": {"message": "🎉 Congrats {member.mention}! You've become a **MYTHIC** 🥇 member!", "has_perms": False},
+
     "⭐VIP": {"message": "🎉 Congrats {member.mention}! You've become a **VIP** ⭐ member!", "has_perms": False},
+
     "✨LEGENDARY": {"message": "🎉 Congrats {member.mention}! You've become a **LEGENDARY** ✨ member!", "has_perms": False},
+
 }
 
+
+
 # Event when member's roles update
+
 @bot.event
+
 async def on_member_update(before, after):
+
     if before.roles != after.roles:
+
         for role in after.roles:
+
             if role.name in ROLE_NAMES and role.name not in [r.name for r in before.roles]:
+
                 await announce_role_update(after, role.name)
 
-# Announce role update and send the image
+
+
+# Announce role update
+
 async def announce_role_update(member, role_name):
+
     role_info = ROLE_NAMES.get(role_name)
 
     if role_info:
+
         message = role_info["message"].format(member=member)
+
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
 
-        # Get the path to the image based on the role name
-        image_path = os.path.join(ROLE_IMAGES_FOLDER, f"{role_name.replace(' ', '_')}.jpg")
-
-        # Check if the image exists and send it
-        if os.path.exists(image_path):
-            with open(image_path, 'rb') as image_file:
-                await channel.send(message, file=discord.File(image_file, f"{role_name}.jpg"))
-        else:
-            await channel.send(message)
+        await channel.send(message)
