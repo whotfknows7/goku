@@ -77,12 +77,12 @@ async def graceful_shutdown():
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=15)
 async def reconnect_bot():
     try:
         # Wait for 15 minutes before disconnecting
         logger.info("------------------------------------------------------------------------------------------------------------------------------")
-        await asyncio.sleep(60)  # Delay for 15 minutes
+        await asyncio.sleep(15 * 60)  # Delay for 15 minutes
         
         logger.info("Disconnecting bot for scheduled reconnect...")
         await bot.close()  # Disconnect the bot
@@ -116,7 +116,7 @@ async def on_ready():
         if not reconnect_bot.is_running():
             logger.info("uh huh")
             reconnect_bot.start()
-        
+                    
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
 
@@ -640,6 +640,7 @@ async def live(ctx):
 
 @tasks.loop(seconds=20)
 async def update_leaderboard(ctx=None):
+    """Update the leaderboard and optionally send it to the channel."""
     global previous_top_10
     global cached_top_users
     global leaderboard_message
@@ -667,7 +668,7 @@ async def update_leaderboard(ctx=None):
         # URL of the rotating trophy GIF
         trophy_gif_url = (
             "https://cdn.discordapp.com/attachments/1303672077068537916/1308447424393511063/2ff0b4fa-5363-4bf1-81bd-835b926ec485-ezgif.com-resize.gif"
-        )
+        )  # Replace with the actual URL of your GIF
 
         # Create the embed message
         embed = discord.Embed(
@@ -677,39 +678,37 @@ async def update_leaderboard(ctx=None):
         )
         embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
         embed.set_thumbnail(url=trophy_gif_url)
+
+        # Set the rotating trophy GIF as the thumbnail
         embed.set_image(url="attachment://leaderboard.png")
 
         # If the context (ctx) is passed, send the leaderboard to the user's channel
         if ctx:
+            # Send the embed and image to the user's channel
             await ctx.send("Here is the live leaderboard!", embed=embed, file=discord.File(image, filename="leaderboard.png"))
         else:
             # Send the leaderboard to the defined leaderboard channel (if periodic update)
             channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-
             if not channel:
                 logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
                 return
-
             if leaderboard_message:
                 # Delete the previous message if it exists
-                try:
-                    await leaderboard_message.delete()
-                    logger.info("Deleted previous leaderboard message before sending the new one.")
-                except discord.NotFound:
-                    logger.info("Previous leaderboard message not found.")
-
-            # Send the new leaderboard message
+                await leaderboard_message.delete()
             leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
 
     except discord.HTTPException as e:
         if e.status == 429:
+            # Handle rate-limiting errors
             retry_after = int(e.retry_after)
             logger.warning(f"Rate-limited. Retrying after {retry_after} seconds.")
             await asyncio.sleep(retry_after)
         else:
             logger.error(f"HTTPException while updating leaderboard: {e}")
+
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
+
         
 @bot.command(name='hi')
 async def hi(ctx):
