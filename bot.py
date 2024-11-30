@@ -77,11 +77,16 @@ async def graceful_shutdown():
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=15)
 async def reconnect_bot():
     global leaderboard_message  # Ensure this is declared as global if you're modifying it inside the function.
 
     try:
+        
+        # Wait for 15 minutes before disconnecting
+        logger.info("Bot will stay active for 15 minutes before disconnecting.")
+        await asyncio.sleep(15 * 60)  # 15 minutes in seconds
+        
         # Fetch the channel and embed data (assuming this is where the image and embed come from)
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)  # Replace with your actual channel ID
         if not channel:
@@ -97,10 +102,6 @@ async def reconnect_bot():
                 logger.info("Leaderboard message not found to delete.")
             except discord.HTTPException as e:
                 logger.error(f"Failed to delete leaderboard message: {e}")
-
-        # Wait for 15 minutes before disconnecting
-        logger.info("Bot will stay active for 15 minutes before disconnecting.")
-        await asyncio.sleep(60)  # 15 minutes in seconds
 
         # Disconnect the bot
         logger.info("Disconnecting bot for scheduled reconnect...")
