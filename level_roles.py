@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 import os
 import requests
 
 # Path to the folder where the images will be saved
-role_images_dir = "role_images"
-
-# Ensure the folder is created if it doesn't exist
-os.makedirs(role_images_dir, exist_ok=True)
+ROLE_IMAGES_FOLDER = "/app/level_roles"
 
 # List of image URLs (paste your image URLs here)
 image_urls = {
@@ -22,21 +19,21 @@ image_urls = {
 
 # Function to download and save the image
 def download_image(role_name, url):
+    # Create the role_images folder if it doesn't exist
+    if not os.path.exists(ROLE_IMAGES_FOLDER):
+        os.makedirs(ROLE_IMAGES_FOLDER)
+
     # Get the image content from the URL
     try:
         response = requests.get(url, stream=True)
         if response.status_code == 200:
-            # Format the file path to save the image (use PNG extension)
-            file_path = os.path.join(role_images_dir, f"{role_name.replace(' ', '_')}.png")
-            
-            # Print the full file path to check where the image is being saved
-            print(f"Saving image to: {file_path}")
+            # Format the file path to save the image
+            file_path = os.path.join(ROLE_IMAGES_FOLDER, f"{role_name.replace(' ', '_')}.jpg")
 
             # Save the image to the file path
             with open(file_path, 'wb') as image_file:
                 for chunk in response.iter_content(1024):
                     image_file.write(chunk)
-
             print(f"Image for '{role_name}' downloaded successfully.")
         else:
             print(f"Failed to download image for '{role_name}'. Status code: {response.status_code}")
