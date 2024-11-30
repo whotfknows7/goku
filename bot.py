@@ -79,22 +79,35 @@ async def graceful_shutdown():
 
 @tasks.loop(minutes=1)
 async def reconnect_bot():
+    global leaderboard_message  # Ensure this is declared as global if you're modifying it inside the function.
+
     try:
+        # Fetch the channel and embed data (assuming this is where the image and embed come from)
+        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)  # Replace with your actual channel ID
+        if not channel:
+            logger.error(f"Leaderboard channel not found: {LEADERBOARD_CHANNEL_ID}")
+            return
+
         if leaderboard_message:
-        try:
-            # Delete the previous message if it exists
-            await leaderboard_message.delete()
-            leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
-        logger.info("Scheduled reconnect task started.")
-        
+            try:
+                # Delete the previous message if it exists
+                await leaderboard_message.delete()
+                logger.info("Deleted previous leaderboard message before reconnecting.")
+            except discord.NotFound:
+                logger.info("Leaderboard message not found to delete.")
+            except discord.HTTPException as e:
+                logger.error(f"Failed to delete leaderboard message: {e}")
+
         # Wait for 15 minutes before disconnecting
         logger.info("Bot will stay active for 15 minutes before disconnecting.")
-        await asyncio.sleep(60)  # Delay for 15 minutes
-        
+        await asyncio.sleep(60)  # 15 minutes in seconds
+
+        # Disconnect the bot
         logger.info("Disconnecting bot for scheduled reconnect...")
         await bot.close()  # Disconnect the bot
+
         await graceful_shutdown()  # Clean up tasks and resources
-        
+
         # Restart the process
         logger.info(f"Restarting bot with: {sys.executable} {sys.argv}")
         os.execv(sys.executable, ['python3'] + sys.argv)  # Restart the script
@@ -103,6 +116,7 @@ async def reconnect_bot():
         logger.error("Failed to restart bot process:", exc_info=True)
         with open("restart_error.log", "a") as log_file:
             log_file.write(f"{datetime.now()}: {traceback.format_exc()}\n")
+
 
 @bot.event
 async def on_ready():
