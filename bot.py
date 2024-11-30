@@ -79,7 +79,18 @@ async def graceful_shutdown():
 
 @tasks.loop(minutes=1)
 async def reconnect_bot():
+    global leaderboard_message
+
     try:
+        if leaderboard_message:
+            try:
+                await leaderboard_message.delete()
+                logger.info("Deleted previous leaderboard message on reconnect.")
+            except discord.NotFound:
+                logger.info("Leaderboard message not found to delete.")
+            except discord.HTTPException as e:
+                logger.error(f"Failed to delete leaderboard message on reconnect: {e}")
+                
         logger.info("Scheduled reconnect task started.")
         
         # Wait for 15 minutes before disconnecting
@@ -93,6 +104,7 @@ async def reconnect_bot():
         # Restart the process
         logger.info(f"Restarting bot with: {sys.executable} {sys.argv}")
         os.execv(sys.executable, ['python3'] + sys.argv)  # Restart the script
+
     except Exception as e:
         logger.error("Failed to restart bot process:", exc_info=True)
         with open("restart_error.log", "a") as log_file:
@@ -127,18 +139,7 @@ async def on_ready():
 
 @bot.event
 async def on_disconnect():
-    global leaderboard_message
-
-    try:      
-        # Check if the leaderboard message exists and delete it
-        if leaderboard_message:
-            try:
-                await leaderboard_message.delete()
-                logger.info("Deleted previous leaderboard message on disconnect.")
-            except discord.NotFound:
-                logger.info("Leaderboard message not found to delete.")
-    except Exception as e:
-        logger.error(f"Error during on_disconnect: {e}")
+    logger.warning("bot is diconnecting, cleaning up tasks")
 
 @bot.event
 async def on_error(event, *args, **kwargs):
