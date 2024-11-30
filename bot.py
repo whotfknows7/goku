@@ -77,14 +77,14 @@ async def graceful_shutdown():
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
-@tasks.loop(minutes=15)
+@tasks.loop(minutes=1)
 async def reconnect_bot():
     try:
         logger.info("Scheduled reconnect task started.")
         
         # Wait for 15 minutes before disconnecting
         logger.info("Bot will stay active for 15 minutes before disconnecting.")
-        await asyncio.sleep(15 * 60)  # Delay for 15 minutes
+        await asyncio.sleep(60)  # Delay for 15 minutes
         
         logger.info("Disconnecting bot for scheduled reconnect...")
         await bot.close()  # Disconnect the bot
@@ -118,16 +118,27 @@ async def on_ready():
         if not reconnect_bot.is_running():
             logger.info("Starting reconnect_bot task.")
             reconnect_bot.start()
-            
-        # Ensure your leaderboard update function is also running
-        update_leaderboard.start()  # Ensure leaderboard update function is running
+              
+        # Call the leaderboard update function
+        update_leaderboard.start()
         
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
 
 @bot.event
 async def on_disconnect():
-    logger.warning("Bot got disconnected. Cleaning up tasks.")
+    global leaderboard_message
+
+    try:      
+        # Check if the leaderboard message exists and delete it
+        if leaderboard_message:
+            try:
+                await leaderboard_message.delete()
+                logger.info("Deleted previous leaderboard message on disconnect.")
+            except discord.NotFound:
+                logger.info("Leaderboard message not found to delete.")
+    except Exception as e:
+        logger.error(f"Error during on_disconnect: {e}")
 
 @bot.event
 async def on_error(event, *args, **kwargs):
