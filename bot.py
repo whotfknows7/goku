@@ -792,7 +792,6 @@ async def announce_role_update(member, role_name):
        
 from discord import app_commands
 
- 
 @bot.command(name='hi')
 async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
