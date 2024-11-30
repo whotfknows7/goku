@@ -845,7 +845,8 @@ async def send_clan_comparison_leaderboard():
     one_emoji = "<a:One:1310686608109862962>"
     two_emoji = "<a:pink_two:1310686637902004224>"
     dash_blue = "<:dash_blue:1310695526244552824>"
-
+    clan_emoji_1 = "<:grove_Street:1312395110570528828>"
+    
     # Prepare the message
     comparison_message = (
         f"**🏆  Weekly Clan Leaderboard!  🏆**\n\n"  # Added newline after heading
@@ -856,6 +857,13 @@ async def send_clan_comparison_leaderboard():
     # Send the message to the desired channel
     channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)  # Change to the desired channel ID
     await channel.send(comparison_message)
+
+# Command definition for !clans
+@bot.command()
+async def clans(ctx):
+    """Command to send the clan comparison leaderboard."""
+    await calculate_clan_xp()
+    await send_clan_comparison_leaderboard()
 
 @tasks.loop(seconds=604800)
 async def reset_weekly():
