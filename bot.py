@@ -347,8 +347,15 @@ def is_emoji(char):
 # Bot event for incoming messages
 @bot.event
 async def on_message(message):
+
     if message.author.bot:
         return
+
+    # Check for words longer than 12 characters
+    words = message.content.split()
+    for word in words:
+        if len(word) > 12:
+            return  # Ignore the message if it contains a word longer than 12 characters
 
     user_id = message.author.id
 
