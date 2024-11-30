@@ -116,8 +116,7 @@ async def on_ready():
         if not reconnect_bot.is_running():
             logger.info("uh huh")
             reconnect_bot.start()
-                  
-        update_leaderboard       
+        
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
 
