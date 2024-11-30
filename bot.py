@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands, tasks
-from discord import app_commands
 import logging
 import asyncio
 from datetime import datetime, timedelta
@@ -791,24 +790,6 @@ async def announce_role_update(member, role_name):
         else:
             print(f"Channel with ID {ROLE_LOG_CHANNEL_ID} not found.")
         
-@bot.tree.command(name="reply_to_message", description="Replies to a specific message")
-async def reply_to_message(interaction: discord.Interaction, message_id: int, response: str):
-    # Get the channel where the message was sent (You can use `interaction.channel` or provide a channel ID)
-    channel = interaction.channel
-
-    try:
-        # Fetch the message by ID
-        message = await channel.fetch_message(message_id)
-
-        # Reply to the fetched message
-        await message.reply(response)
-
-        await interaction.response.send_message("Message replied successfully!", ephemeral=True)
-    except discord.NotFound:
-        await interaction.response.send_message("Message not found!", ephemeral=True)
-    except discord.Forbidden:
-        await interaction.response.send_message("I don't have permission to reply to the message!", ephemeral=True)
-
 @bot.command(name='hi')
 async def hi(ctx):
     latency = bot.latency * 1000  # Convert latency to milliseconds
