@@ -24,6 +24,7 @@ D_LAST_RESET_TIME_FILE = "daily_last_reset_time.txt"
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
 reset_task_running = False  # Global variable to track task status
+ROLE_IMAGES_FOLDER = "./role_images"  # Path to your folder containing images
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -939,10 +940,20 @@ async def on_member_update(before, after):
             if role.name in ROLE_NAMES and role.name not in [r.name for r in before.roles]:
                 await announce_role_update(after, role.name)
 
-# Announce role update
+# Announce role update and send the image
 async def announce_role_update(member, role_name):
     role_info = ROLE_NAMES.get(role_name)
+
     if role_info:
         message = role_info["message"].format(member=member)
         channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
-        await channel.send(message)
+
+        # Get the path to the image based on the role name
+        image_path = os.path.join(ROLE_IMAGES_FOLDER, f"{role_name.replace(' ', '_')}.jpg")
+
+        # Check if the image exists and send it
+        if os.path.exists(image_path):
+            with open(image_path, 'rb') as image_file:
+                await channel.send(message, file=discord.File(image_file, f"{role_name}.jpg"))
+        else:
+            await channel.send(message)
