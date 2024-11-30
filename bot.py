@@ -79,18 +79,12 @@ async def graceful_shutdown():
 
 @tasks.loop(minutes=1)
 async def reconnect_bot():
-    global leaderboard_message
-
     try:
         if leaderboard_message:
-            try:
-                await leaderboard_message.delete()
-                logger.info("Deleted previous leaderboard message on reconnect.")
-            except discord.NotFound:
-                logger.info("Leaderboard message not found to delete.")
-            except discord.HTTPException as e:
-                logger.error(f"Failed to delete leaderboard message on reconnect: {e}")
-                
+        try:
+            # Delete the previous message if it exists
+            await leaderboard_message.delete()
+            leaderboard_message = await channel.send(embed=embed, file=discord.File(image, filename="leaderboard.png"))
         logger.info("Scheduled reconnect task started.")
         
         # Wait for 15 minutes before disconnecting
