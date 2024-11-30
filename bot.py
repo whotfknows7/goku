@@ -482,27 +482,40 @@ def fetch_emoji_image(emoji_char):
         logging.warning(f"Emoji image not found for {emoji_char} at {emoji_image_path}")
         return None
 
-def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28):
+def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji_size=28, emoji_offset=5):
+    """
+    Renders the nickname with emojis, where emojis are slightly offset down from the text.
+    
+    :param draw: ImageDraw object to draw text and emojis
+    :param img: Image object where the nickname and emojis will be rendered
+    :param nickname: The string nickname with embedded emojis
+    :param position: The (x, y) position where the text should start
+    :param font: The font to use for rendering the text
+    :param emoji_size: The size of the emoji to render
+    :param emoji_offset: The vertical offset to move the emojis down (default 5 pixels)
+    """
 
+    # Split the nickname into text and emoji parts
     text_part = ''.join([char for char in nickname if not emoji.is_emoji(char)])
     emoji_part = ''.join([char for char in nickname if emoji.is_emoji(char)])
 
-    # Increase outline thickness
+    # Increase outline thickness for better visibility
     stroke_width = 2  # Increased stroke width for thicker outline
 
     # Draw regular text first with outline
     draw.text(position, text_part, font=font, fill="white", stroke_width=stroke_width, stroke_fill="black")
 
-    # Get the bounding box of the regular text to place emojis next to it
+    # Get the bounding box of the regular text to position the emojis correctly
     text_bbox = draw.textbbox((0, 0), text_part, font=font)
     text_width = text_bbox[2] - text_bbox[0]  # Width of the regular text part
 
-    # Adjust the position to draw emojis after regular text
-    emoji_position = (position[0] + text_width + 5, position[1])  # No vertical offset, emojis are aligned with the text
+    # Adjust the position to draw emojis after the regular text
+    emoji_position = (position[0] + text_width + 5, position[1] + emoji_offset)  # Adjust y position by emoji_offset
 
     # Loop through each character in the emoji part and render it as an image
     for char in emoji_part:
         if emoji.is_emoji(char):  # Ensure it's an emoji
+
             emoji_img = fetch_emoji_image(char)  # Fetch the emoji image from local folder
 
             if emoji_img:
@@ -513,6 +526,7 @@ def render_nickname_with_emoji_images(draw, img, nickname, position, font, emoji
 
                 # Update position for the next emoji
                 emoji_position = (emoji_position[0] + emoji_size + 5, emoji_position[1])
+
                 
 def format_points(points):
     if points >= 1000:
@@ -702,7 +716,7 @@ async def update_leaderboard(ctx=None):
             description="The leaderboard is live! Check the leaderboard to see if your messages have earned you a spot in the top 10 today!",
             color=discord.Color.gold()
         )
-        embed.set_footer(text="To change your name on the leaderboard, go to User Settings > Account > Server Profile > Server Nickname.")
+        embed.set_footer(text="To change your name on the leaderboard, Go to User Settings > Account > Server Profile > Server Nickname.")
         embed.set_thumbnail(url=trophy_gif_url)
 
         # Set the rotating trophy GIF as the thumbnail
