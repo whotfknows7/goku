@@ -850,8 +850,8 @@ async def send_clan_comparison_leaderboard():
     # Prepare the message
     comparison_message = (
         f"**🏆  Weekly Clan Leaderboard!  🏆**\n\n"  # Added newline after heading
-        f"{one_emoji}{dash_blue}<@&{CLAN_ROLE_1_ID}>     `{total_xp_clan_1:,}` XP Pts\n"  # Ping Clan Role 1
-        f"{two_emoji}{dash_blue}<@&{CLAN_ROLE_2_ID}>     `{total_xp_clan_2:,}` XP Pts\n"  # Ping Clan Role 2
+        f"{one_emoji}{dash_blue}{clan_emoji_1}  <@&{CLAN_ROLE_1_ID}>  `{total_xp_clan_1:,}` XP Pts\n"  # Ping Clan Role 1
+        f"{two_emoji}{dash_blue}<@&{CLAN_ROLE_2_ID}>  `{total_xp_clan_2:,}` XP Pts\n"  # Ping Clan Role 2
     )
 
     # Send the message to the desired channel
@@ -862,7 +862,6 @@ async def send_clan_comparison_leaderboard():
 @bot.command()
 async def clans(ctx):
     """Command to send the clan comparison leaderboard."""
-    await calculate_clan_xp()
     await send_clan_comparison_leaderboard()
 
 @tasks.loop(seconds=604800)
