@@ -750,6 +750,45 @@ async def update_leaderboard(ctx=None):
     except Exception as e:
         logger.error(f"Unexpected error in update_leaderboard: {e}")
 
+# Role names and messages (same as defined previously)
+ROLE_NAMES = {
+    "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
+    "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
+    "🥉VETERAN": {"message": "🎉 Congrats {member.mention}! You've become a **VETERAN** 🥉 member!", "has_perms": False},
+    "🥈ELITE": {"message": "🎉 Congrats {member.mention}! You've become an **ELITE** 🥈 member!", "has_perms": False},
+    "🥇MYTHIC": {"message": "🎉 Congrats {member.mention}! You've become a **MYTHIC** 🥇 member!", "has_perms": False},
+    "⭐VIP": {"message": "🎉 Congrats {member.mention}! You've become a **VIP** ⭐ member!", "has_perms": False},
+    "✨LEGENDARY": {"message": "🎉 Congrats {member.mention}! You've become a **LEGENDARY** ✨ member!", "has_perms": False},
+}      
+
+# Event when a member's roles update
+@bot.event
+async def on_member_update(before, after):
+    if before.roles != after.roles:  # If roles have changed
+        for role in after.roles:
+            if role.name in ROLE_NAMES and role.name not in [r.name for r in before.roles]:
+                await announce_role_update(after, role.name)
+
+# Announce role update and send the image
+async def announce_role_update(member, role_name):
+    role_info = ROLE_NAMES.get(role_name)
+    if role_info:
+        message = role_info["message"].format(member=member)
+        
+        # Get the channel using ROLE_LOG_CHANNEL_ID
+        channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
+        if channel:
+            await channel.send(message)
+
+            # Send the corresponding image if it exists
+            image_path = os.path.join(ROLE_IMAGES_FOLDER, f"{role_name.replace(' ', '_')}.png")
+            if os.path.exists(image_path):
+                with open(image_path, 'rb') as image_file:
+                    await channel.send(file=discord.File(image_file, f"{role_name.replace(' ', '_')}.png"))
+            else:
+                await channel.send("Image not found for this role.")
+        else:
+            print(f"Channel with ID {ROLE_LOG_CHANNEL_ID} not found.")
         
 @bot.command(name='hi')
 async def hi(ctx):
@@ -921,53 +960,3 @@ if __name__ == "__main__":
         bot.run('MTMwMzQyNjkzMzU4MDc2MzIzNg.GtV2My.Z76kCOt4VKCzCc3jvmIzA_mfhiSrtCo-geUZos')
     except KeyboardInterrupt:
         asyncio.run(close_bot())
-      
-ROLE_NAMES = {
-
-    "🧔Homo Sapien": {"message": "🎉 Congrats {member.mention}! You've become a **Homo Sapien** 🧔 and unlocked GIF permissions!", "has_perms": True},
-
-    "🏆Homie": {"message": "🎉 Congrats {member.mention}! You've become a **Homie** 🏆 and unlocked Image permissions!", "has_perms": True},
-
-    "🥉VETERAN": {"message": "🎉 Congrats {member.mention}! You've become a **VETERAN** 🥉 member!", "has_perms": False},
-
-    "🥈ELITE": {"message": "🎉 Congrats {member.mention}! You've become an **ELITE** 🥈 member!", "has_perms": False},
-
-    "🥇MYTHIC": {"message": "🎉 Congrats {member.mention}! You've become a **MYTHIC** 🥇 member!", "has_perms": False},
-
-    "⭐VIP": {"message": "🎉 Congrats {member.mention}! You've become a **VIP** ⭐ member!", "has_perms": False},
-
-    "✨LEGENDARY": {"message": "🎉 Congrats {member.mention}! You've become a **LEGENDARY** ✨ member!", "has_perms": False},
-
-}
-
-
-
-# Event when member's roles update
-
-@bot.event
-
-async def on_member_update(before, after):
-
-    if before.roles != after.roles:
-
-        for role in after.roles:
-
-            if role.name in ROLE_NAMES and role.name not in [r.name for r in before.roles]:
-
-                await announce_role_update(after, role.name)
-
-
-
-# Announce role update
-
-async def announce_role_update(member, role_name):
-
-    role_info = ROLE_NAMES.get(role_name)
-
-    if role_info:
-
-        message = role_info["message"].format(member=member)
-
-        channel = bot.get_channel(ROLE_LOG_CHANNEL_ID)
-
-        await channel.send(message)
