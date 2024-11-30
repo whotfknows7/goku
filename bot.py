@@ -140,9 +140,7 @@ async def on_ready():
             logger.info("Starting reconnect_bot task.")
             reconnect_bot.start()
               
-        # Call the leaderboard update function
-        update_leaderboard.start()
-        
+        if update_leaderboard.start()
     except Exception as e:
         logger.error(f"Error in on_ready: {e}")
 
