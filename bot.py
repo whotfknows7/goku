@@ -31,12 +31,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Channel IDs
-ROLE_LOG_CHANNEL_ID = 
-LEADERBOARD_CHANNEL_ID = 
-GUILD_ID =   # Replace with your actual guild ID
-CLAN_ROLE_1_ID =   # Replace with your actual Clan Role 1 ID
-CLAN_ROLE_2_ID =
-DISCORD_TOKEN = 
+ROLE_LOG_CHANNEL_ID = 1251143629943345204
+LEADERBOARD_CHANNEL_ID = 1303672077068537916
+GUILD_ID = 1227505156220784692  # Replace with your actual guild ID
+CLAN_ROLE_1_ID = 1245407423917854754  # Replace with your actual Clan Role 1 ID
+CLAN_ROLE_2_ID = 1247225208700665856
+
 # Define intents
 intents = discord.Intents.default()
 intents.members = True
@@ -54,6 +54,20 @@ cached_image_path = "leaderboard.png"
 
 # Define FONT_PATH globally
 FONT_PATH = "TT Fors Trial Bold.ttf"  # Adjust the path as needed
+
+# Function to load variables from a .env file
+def load_env(filename='.env'):
+    with open(filename) as f:
+        for line in f:
+            if line.strip() and not line.startswith('#'):  # Ignore comments and empty lines
+                key, value = line.strip().split('=', 1)
+                os.environ[key] = value
+
+# Load variables from .env file
+load_env()
+
+# Access the environment variables
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 
 async def graceful_shutdown():
     logger.info("Shutting down bot gracefully...")
